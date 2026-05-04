@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
 import type { ChangeEvent, Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Field, GhostButton, Input, ProgressBar, Select, Sheet, StatCard, Textarea } from "@/components/ui";
@@ -9,9 +8,12 @@ import { seedState } from "@/lib/seed";
 import type { Debt, Expense, FinanceState, Goal, Income, Payment } from "@/lib/types";
 
 const DATA_KEY = "hisab-pro-state-v1";
+const BACKUP_KEY = "hisab-pro-state-backup-v1";
 const PIN_KEY = "hisab-pro-pin";
 const AUTH_KEY = "hisab-pro-unlocked-until";
 const LAST_NOTIFY_KEY = "hisab-pro-last-notify";
+const DB_NAME = "hisablock-finance-db";
+const DB_STORE = "finance-state";
 const DEFAULT_PIN = "1122";
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 const incomeSources = ["Salary", "Fiverr", "Upwork", "Client payment", "Refund", "Other"];
@@ -74,6 +76,55 @@ const notifyDuePayments = (payments: Payment[], currency: string, force = false)
   });
 };
 
+const openFinanceDb = () =>
+  new Promise<IDBDatabase | null>((resolve) => {
+    if (typeof indexedDB === "undefined") return resolve(null);
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE, { keyPath: "id" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+  });
+
+const loadFromIndexedDb = async () => {
+  const db = await openFinanceDb();
+  if (!db) return null;
+  return new Promise<FinanceState | null>((resolve) => {
+    const request = db.transaction(DB_STORE, "readonly").objectStore(DB_STORE).get("current");
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result?.state ? normalizeState(request.result.state) : null);
+    };
+    request.onerror = () => {
+      db.close();
+      resolve(null);
+    };
+  });
+};
+
+const saveToIndexedDb = async (state: FinanceState) => {
+  const db = await openFinanceDb();
+  if (!db) return;
+  const tx = db.transaction(DB_STORE, "readwrite");
+  tx.objectStore(DB_STORE).put({ id: "current", updated_at: new Date().toISOString(), state });
+  tx.oncomplete = () => db.close();
+  tx.onerror = () => db.close();
+};
+
+const loadFromLocalStorage = () => {
+  const saved = localStorage.getItem(DATA_KEY) || localStorage.getItem(BACKUP_KEY);
+  return saved ? normalizeState(JSON.parse(saved)) : null;
+};
+
+const saveFinanceState = (state: FinanceState) => {
+  const payload = JSON.stringify(state);
+  localStorage.setItem(DATA_KEY, payload);
+  localStorage.setItem(BACKUP_KEY, payload);
+  void saveToIndexedDb(state);
+};
+
 const applyCashDelta = (state: FinanceState, delta: number): FinanceState => ({
   ...state,
   current_cash: state.current_cash + delta,
@@ -95,29 +146,38 @@ export default function Home() {
   const [expenseFilter, setExpenseFilter] = useState("This month");
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(DATA_KEY);
-      setState(saved ? normalizeState(JSON.parse(saved)) : seedState);
-    } catch {
-      localStorage.setItem(DATA_KEY, JSON.stringify(seedState));
-      setState(seedState);
-    }
-    if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, DEFAULT_PIN);
-    setHasPin(Boolean(localStorage.getItem(PIN_KEY)));
-    setAuthed(Number(localStorage.getItem(AUTH_KEY) || 0) > Date.now());
-    if ("serviceWorker" in navigator) {
-      if (process.env.NODE_ENV === "production") {
-        navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-      } else {
-        navigator.serviceWorker.getRegistrations().then((items) => items.forEach((item) => item.unregister()));
-        caches?.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+    let active = true;
+    async function load() {
+      let next = seedState;
+      try {
+        next = loadFromLocalStorage() || (await loadFromIndexedDb()) || seedState;
+      } catch {
+        next = (await loadFromIndexedDb()) || seedState;
       }
+      if (!active) return;
+      setState(next);
+      saveFinanceState(next);
+      if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, DEFAULT_PIN);
+      setHasPin(Boolean(localStorage.getItem(PIN_KEY)));
+      setAuthed(Number(localStorage.getItem(AUTH_KEY) || 0) > Date.now());
+      if ("serviceWorker" in navigator) {
+        if (process.env.NODE_ENV === "production") {
+          navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+        } else {
+          navigator.serviceWorker.getRegistrations().then((items) => items.forEach((item) => item.unregister()));
+          caches?.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+        }
+      }
+      setHydrated(true);
     }
-    setHydrated(true);
+    void load();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem(DATA_KEY, JSON.stringify(state));
+    if (hydrated) saveFinanceState(state);
   }, [hydrated, state]);
 
   useEffect(() => {
@@ -208,7 +268,7 @@ export default function Home() {
   }
 
   function resetData() {
-    localStorage.setItem(DATA_KEY, JSON.stringify(seedState));
+    saveFinanceState(seedState);
     setState(seedState);
   }
 
@@ -637,7 +697,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
     if (!file) return;
     const parsed = JSON.parse(await file.text());
     const restored = normalizeState(parsed.state || parsed);
-    localStorage.setItem(DATA_KEY, JSON.stringify(restored));
+    saveFinanceState(restored);
     setState(restored);
     e.target.value = "";
     alert("Backup restored.");
