@@ -13,18 +13,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Money Control / Hisab Pro",
-  description: "Personal finance control app",
+  title: "HisabLock",
+  description: "Mobile-first personal finance control app",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "Hisab Pro",
+    statusBarStyle: "black-translucent",
+    title: "HisabLock",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0F172A",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#F5F7FB",
 };
 
 export default function RootLayout({

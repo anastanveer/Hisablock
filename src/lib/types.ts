@@ -1,6 +1,22 @@
-export type Priority = "high" | "medium" | "low";
+export type Priority = "critical" | "high" | "medium" | "low";
 export type DebtStatus = "active" | "paid";
 export type PaymentStatus = "unpaid" | "paid" | "overdue";
+
+export interface CashAccount {
+  id: string;
+  title: string;
+  amount: number;
+  include_in_safe: boolean;
+}
+
+export interface Asset {
+  id: string;
+  title: string;
+  amount: number;
+  currency: string;
+  include_in_safe: boolean;
+  notes?: string;
+}
 
 export interface Income {
   id: string;
@@ -28,10 +44,15 @@ export interface Debt {
   total_amount: number;
   remaining_amount: number;
   monthly_payment: number;
+  used_amount?: number;
+  available_limit?: number;
+  total_limit?: number;
   due_date?: string;
   due_day?: number;
+  reminder_day?: number;
   priority: Priority;
   debt_type: string;
+  icon?: "bank" | "card" | "tabby" | "office";
   status: DebtStatus;
   notes?: string;
 }
@@ -44,6 +65,11 @@ export interface Payment {
   due_date: string;
   paid_date?: string;
   status: PaymentStatus;
+  category?: string;
+  priority?: Priority;
+  is_recurring?: boolean;
+  recurring_day?: number;
+  reminder_day?: number;
   notes?: string;
 }
 
@@ -62,10 +88,13 @@ export interface Settings {
   salary_day: number;
   currency: string;
   theme: "light" | "dark";
+  profile_version: number;
 }
 
 export interface FinanceState {
   current_cash: number;
+  cash_accounts: CashAccount[];
+  assets: Asset[];
   incomes: Income[];
   expenses: Expense[];
   debts: Debt[];

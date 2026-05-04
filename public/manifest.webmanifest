@@ -1,11 +1,12 @@
 {
-  "name": "Money Control / Hisab Pro",
-  "short_name": "Hisab Pro",
-  "description": "Personal finance control app",
+  "name": "HisabLock",
+  "short_name": "HisabLock",
+  "description": "Mobile-first personal finance control app",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#F3F6FA",
-  "theme_color": "#0F172A",
+  "background_color": "#F5F7FB",
+  "theme_color": "#F5F7FB",
   "orientation": "portrait",
   "icons": [
     {

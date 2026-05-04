@@ -4,19 +4,20 @@
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Field, GhostButton, Input, ProgressBar, Select, Sheet, StatCard, Textarea } from "@/components/ui";
-import { categoryTotals, debtPaidThisMonth, financialScore, money, monthlyExpenses, monthlyIncome, overdue, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
+import { categoryTotals, debtPaidThisMonth, dueTomorrow, financialScore, freeCashAfterRent, money, monthlyExpenses, monthlyIncome, overdue, rentDue, safeCash, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
 import { seedState } from "@/lib/seed";
 import type { Debt, Expense, FinanceState, Goal, Income, Payment } from "@/lib/types";
 
 const DATA_KEY = "hisab-pro-state-v1";
 const PIN_KEY = "hisab-pro-pin";
+const DEFAULT_PIN = "1122";
 const incomeSources = ["Salary", "Fiverr", "Upwork", "Client payment", "Refund", "Other"];
 const expenseCategories = ["Rent", "Food", "Transport", "Mobile", "Family Support", "Shopping", "Wife/Gifts", "Debt Payment", "Office Deduction", "Emergency", "Other"];
-const debtTypes = ["credit card", "loan", "Tabby", "office", "family", "other"];
+const debtTypes = ["Credit Card", "Finance Loan", "Tabby / Installment", "Installment", "Office Loan", "family", "other"];
 const paymentMethods = ["Cash", "Debit Card", "Credit Card", "Bank Transfer", "Other"];
 
 type Tab = "Home" | "Add" | "Calendar" | "Debts" | "Summary";
-type IconName = "home" | "plus" | "calendar" | "card" | "chart" | "income" | "expense" | "settings" | "sun" | "moon";
+type IconName = "home" | "plus" | "calendar" | "card" | "chart" | "income" | "expense" | "settings" | "sun" | "moon" | "wallet" | "bank" | "warning" | "crypto" | "office" | "check";
 type SheetKind = "income" | "expense" | "debt" | "payment" | "goal" | "settings";
 
 const navItems: { tab: Tab; icon: IconName }[] = [
@@ -27,12 +28,28 @@ const navItems: { tab: Tab; icon: IconName }[] = [
   { tab: "Summary", icon: "chart" },
 ];
 
-const normalizeState = (value: FinanceState): FinanceState => ({
-  ...value,
-  settings: {
-    ...seedState.settings,
-    ...value.settings,
-  },
+const normalizeState = (value: FinanceState): FinanceState => {
+  if (!value.settings?.profile_version || value.settings.profile_version < seedState.settings.profile_version) return seedState;
+  return {
+    ...seedState,
+    ...value,
+    cash_accounts: value.cash_accounts?.length ? value.cash_accounts : seedState.cash_accounts,
+    assets: value.assets?.length ? value.assets : seedState.assets,
+    settings: {
+      ...seedState.settings,
+      ...value.settings,
+    },
+  };
+};
+
+const applyCashDelta = (state: FinanceState, delta: number): FinanceState => ({
+  ...state,
+  current_cash: state.current_cash + delta,
+  cash_accounts: state.cash_accounts?.length
+    ? state.cash_accounts.map((account, index, accounts) =>
+        index === accounts.length - 1 ? { ...account, amount: account.amount + delta } : account,
+      )
+    : state.cash_accounts,
 });
 
 export default function Home() {
@@ -53,6 +70,7 @@ export default function Home() {
       localStorage.setItem(DATA_KEY, JSON.stringify(seedState));
       setState(seedState);
     }
+    if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, DEFAULT_PIN);
     setHasPin(Boolean(localStorage.getItem(PIN_KEY)));
     if ("serviceWorker" in navigator) {
       if (process.env.NODE_ENV === "production") {
@@ -71,14 +89,22 @@ export default function Home() {
 
   const currency = state.settings.currency;
   const isDark = state.settings.theme === "dark";
+  const availableCash = safeCash(state);
   const income = monthlyIncome(state);
   const expenses = monthlyExpenses(state);
   const debt = totalDebt(state.debts);
   const upcoming7 = upcoming(state.payments, 7);
   const upcoming15 = upcoming(state.payments, 15);
-  const upcoming15Total = sum(upcoming15, (p) => p.amount);
+  const rentAmount = rentDue(state);
+  const freeAfterRent = freeCashAfterRent(state);
+  const upcoming7Total = sum(upcoming7.filter((payment) => payment.category !== "Rent"), (p) => p.amount);
+  const upcoming15Total = sum(upcoming15.filter((payment) => payment.category !== "Rent"), (p) => p.amount);
   const safe = safeToSpend(state);
   const score = financialScore(state);
+  const nextPayment = [...state.payments]
+    .filter((p) => p.status !== "paid" && new Date(p.due_date).getTime() >= new Date(todayISO()).getTime())
+    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0];
+  const binanceAsset = state.assets.find((asset) => asset.id === "asset-binance");
 
   const filteredExpenses = useMemo(() => {
     const now = new Date();
@@ -115,11 +141,11 @@ export default function Home() {
     setState((s) => {
       if (kind === "income") {
         const item = s.incomes.find((i) => i.id === id);
-        return { ...s, current_cash: s.current_cash - (item?.amount || 0), incomes: s.incomes.filter((i) => i.id !== id) };
+        return { ...applyCashDelta(s, -(item?.amount || 0)), incomes: s.incomes.filter((i) => i.id !== id) };
       }
       if (kind === "expense") {
         const item = s.expenses.find((i) => i.id === id);
-        return { ...s, current_cash: s.current_cash + (item?.amount || 0), expenses: s.expenses.filter((i) => i.id !== id) };
+        return { ...applyCashDelta(s, item?.amount || 0), expenses: s.expenses.filter((i) => i.id !== id) };
       }
       if (kind === "debt") return { ...s, debts: s.debts.filter((d) => d.id !== id), payments: s.payments.filter((p) => p.debt_id !== id) };
       if (kind === "payment") return { ...s, payments: s.payments.filter((p) => p.id !== id) };
@@ -131,8 +157,7 @@ export default function Home() {
   function markPaymentPaid(payment: Payment) {
     if (payment.status === "paid") return;
     setState((s) => ({
-      ...s,
-      current_cash: s.current_cash - payment.amount,
+      ...applyCashDelta(s, -payment.amount),
       payments: s.payments.map((p) => (p.id === payment.id ? { ...p, status: "paid", paid_date: todayISO() } : p)),
       debts: s.debts.map((d) => {
         if (d.id !== payment.debt_id) return d;
@@ -146,8 +171,7 @@ export default function Home() {
     const amount = debtItem.monthly_payment || debtItem.remaining_amount;
     const remaining = Math.max(0, debtItem.remaining_amount - amount);
     setState((s) => ({
-      ...s,
-      current_cash: s.current_cash - amount,
+      ...applyCashDelta(s, -amount),
       debts: s.debts.map((d) => (d.id === debtItem.id ? { ...d, remaining_amount: remaining, status: remaining === 0 ? "paid" : "active" } : d)),
       payments: [{ id: uid(), debt_id: debtItem.id, title: debtItem.title, amount, due_date: todayISO(), paid_date: todayISO(), status: "paid" }, ...s.payments],
     }));
@@ -158,13 +182,13 @@ export default function Home() {
       <main className={`${isDark ? "dark" : ""} flex min-h-dvh items-center justify-center bg-[#F3F6FA] px-5 dark:bg-slate-950`}>
         <Card className="w-full max-w-sm p-6">
           <div className="mb-8">
-            <p className="text-sm font-semibold text-emerald-600">Hisab Pro</p>
-            <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white">Money Control</h1>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{hasPin ? "Enter your PIN" : "Create a 4 digit PIN"}</p>
+            <p className="text-sm font-semibold text-emerald-600">HisabLock</p>
+            <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white">Unlock your money plan</h1>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{hasPin ? "Enter your PIN" : "PIN is 1122 by default"}</p>
           </div>
           <form className="grid gap-4" onSubmit={login}>
             <Input inputMode="numeric" minLength={4} maxLength={8} type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" required />
-            <Button>{hasPin ? "Unlock" : "Create PIN"}</Button>
+            <Button>{hasPin ? "Unlock HisabLock" : "Create PIN"}</Button>
           </form>
         </Card>
       </main>
@@ -172,13 +196,13 @@ export default function Home() {
   }
 
   return (
-    <main className={`${isDark ? "dark" : ""} min-h-dvh bg-[radial-gradient(circle_at_top,#dff8ef_0,#f3f6fa_42%,#eef2f7_100%)] text-slate-950 dark:bg-[radial-gradient(circle_at_top,#064E3B_0,#020617_42%,#0F172A_100%)] dark:text-white`}>
-      <div className="mx-auto min-h-dvh w-full max-w-md bg-transparent pb-28 shadow-2xl md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
-        <header className="sticky top-0 z-20 bg-[#F3F6FA]/80 px-5 pb-3 pt-5 backdrop-blur-xl dark:bg-slate-950/65">
+    <main className={`${isDark ? "dark" : ""} min-h-dvh bg-[#F5F7FB] text-slate-950 dark:bg-[radial-gradient(circle_at_top,#064E3B_0,#020617_42%,#0F172A_100%)] dark:text-white`}>
+      <div className="mx-auto min-h-dvh w-full max-w-md bg-[linear-gradient(180deg,#F8FAFC_0%,#EEF4F8_100%)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-[linear-gradient(180deg,#07131F_0%,#020617_100%)] md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
+        <header className="sticky top-0 z-20 bg-white/75 px-5 pb-3 pt-[calc(1.1rem+env(safe-area-inset-top))] backdrop-blur-2xl dark:bg-slate-950/70">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600">Hisab Pro</p>
-              <h1 className="text-2xl font-black">Money Control</h1>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600">HisabLock</p>
+              <h1 className="text-2xl font-black tracking-tight">Good evening</h1>
             </div>
             <div className="flex gap-2">
               <button className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-900 shadow-[0_10px_28px_rgba(15,23,42,0.10)] dark:bg-white/10 dark:text-white" onClick={toggleTheme} aria-label="Toggle theme">
@@ -194,18 +218,65 @@ export default function Home() {
         <div className="grid gap-4 px-5 pt-4">
           {tab === "Home" && (
             <>
-              <Card className={`${safe < 0 ? "bg-red-600" : "bg-slate-950"} overflow-hidden p-5 text-white ring-1 ring-white/40`}>
-                <p className="text-sm font-semibold opacity-75">Safe to Spend</p>
-                <p className="mt-2 text-4xl font-black">{money(safe, currency)}</p>
-                <p className="mt-3 text-sm opacity-85">{safe < 0 ? "You should not spend anything extra right now." : "After upcoming 15 day payments and buffer."}</p>
+              <Card className="overflow-hidden bg-slate-950 p-5 text-white ring-1 ring-white/40 dark:bg-slate-900">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-300">Current Cash</p>
+                    <p className="mt-2 text-4xl font-black tracking-tight">{money(availableCash, currency)}</p>
+                    <p className="mt-3 text-sm text-slate-300">Salary {money(8000, currency)}/month</p>
+                  </div>
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-400 text-slate-950 shadow-[0_14px_34px_rgba(16,185,129,0.32)]">
+                    <Icon name="wallet" />
+                  </span>
+                </div>
+                <div className="mt-5 grid gap-2">
+                  {state.cash_accounts.map((account) => (
+                    <div key={account.id} className="flex items-center justify-between rounded-2xl bg-white/8 px-3 py-2 text-sm">
+                      <span className="text-slate-300">{account.title}</span>
+                      <span className="font-black">{money(account.amount, currency)}</span>
+                    </div>
+                  ))}
+                </div>
               </Card>
-              {upcoming15Total > state.current_cash && <Alert text="Upcoming payments are greater than your available cash." tone="red" />}
+
+              <Card className="border-emerald-200 bg-emerald-50/90 p-4 dark:border-emerald-500/15 dark:bg-emerald-500/10">
+                <div className="grid grid-cols-2 gap-3">
+                  <Mini label="Reserved for Rent" value={money(rentAmount, currency)} />
+                  <Mini label="Free After Rent" value={money(freeAfterRent, currency)} />
+                </div>
+                <p className="mt-3 rounded-2xl bg-amber-100 px-3 py-2 text-sm font-black text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Rent must be paid first</p>
+              </Card>
+
+              <Card className={`${safe < 100 ? "bg-red-600 text-white" : safe < 500 ? "bg-amber-500 text-white" : "bg-white text-slate-950 dark:bg-slate-900 dark:text-white"} p-5`}>
+                <p className="text-sm font-semibold opacity-75">Safe to Spend</p>
+                <p className="mt-2 text-4xl font-black tracking-tight">{money(safe, currency)}</p>
+                <p className="mt-3 text-sm opacity-85">{safe < 100 ? "Your available cash is already reserved for rent. Do not spend extra." : "After rent, 15 day payments and AED 500 buffer."}</p>
+              </Card>
+
+              {(upcoming15Total + rentAmount > availableCash || safe < 100) && <Alert text={safe < 100 ? "Your available cash is already reserved for rent. Do not spend extra." : "Upcoming payments are greater than your available cash."} tone="red" />}
+
               <div className="grid grid-cols-2 gap-3">
-                <StatCard label="Cash" value={money(state.current_cash, currency)} />
-                <StatCard label="Income" value={money(income, currency)} tone="green" />
-                <StatCard label="Expenses" value={money(expenses, currency)} tone="red" />
-                <StatCard label="Debt" value={money(debt, currency)} tone="amber" />
+                <StatCard label="Upcoming 7 days" value={money(upcoming7Total, currency)} tone="amber" />
+                <StatCard label="Upcoming 15 days" value={money(upcoming15Total, currency)} tone="amber" />
+                <StatCard label="Total Debt" value={money(debt, currency)} tone="red" />
+                <StatCard label="Binance Asset" value={`${binanceAsset?.amount || 0} USDT`} tone="green" />
               </div>
+
+              {binanceAsset && <AssetCard title={binanceAsset.title} value={`${binanceAsset.amount} ${binanceAsset.currency}`} note="Asset only, not included in Safe to Spend." />}
+
+              {nextPayment && (
+                <Card className="border-amber-200 bg-amber-50/90 dark:border-amber-500/20 dark:bg-amber-500/10">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber-600 dark:text-amber-300">Next payment</p>
+                      <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">{nextPayment.title}</h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Due {nextPayment.due_date}</p>
+                    </div>
+                    <p className="text-right text-xl font-black text-amber-600 dark:text-amber-300">{money(nextPayment.amount, currency)}</p>
+                  </div>
+                </Card>
+              )}
+
               <Card>
                 <div className="mb-3 flex items-center justify-between">
                   <div>
@@ -216,24 +287,21 @@ export default function Home() {
                 </div>
                 <ProgressBar value={100 - (debt / Math.max(1, sum(state.debts, (d) => d.total_amount))) * 100} />
               </Card>
+
               <div className="grid grid-cols-2 gap-3">
-                <Quick icon="income" label="Add Income" onClick={() => setSheet({ kind: "income" })} />
-                <Quick icon="expense" label="Add Expense" onClick={() => setSheet({ kind: "expense" })} />
-                <Quick icon="card" label="Add Debt" onClick={() => setSheet({ kind: "debt" })} />
-                <Quick icon="calendar" label="Add Payment" onClick={() => setSheet({ kind: "payment" })} />
+                <Quick icon="income" label="Income" onClick={() => setSheet({ kind: "income" })} />
+                <Quick icon="expense" label="Expense" onClick={() => setSheet({ kind: "expense" })} />
+                <Quick icon="card" label="Debt" onClick={() => setSheet({ kind: "debt" })} />
+                <Quick icon="calendar" label="Payment" onClick={() => setSheet({ kind: "payment" })} />
               </div>
+
               <Card>
-                <h2 className="mb-3 text-base font-bold">Upcoming</h2>
-                <div className="grid grid-cols-2 gap-3">
-                  <Mini label="Next 7 days" value={money(sum(upcoming7, (p) => p.amount), currency)} />
-                  <Mini label="Next 15 days" value={money(upcoming15Total, currency)} />
-                </div>
-                <div className="mt-3">
-                  <ListPayments payments={upcoming15} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} />
-                </div>
+                <h2 className="mb-3 text-base font-bold">Upcoming Payments</h2>
+                <ListPayments payments={upcoming15} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} />
               </Card>
+
               <Card>
-                <h2 className="mb-2 text-base font-bold">Monthly Result</h2>
+                <h2 className="mb-2 text-base font-bold">This Month</h2>
                 <p className={`text-2xl font-black ${income - expenses >= 0 ? "text-emerald-600" : "text-red-600"}`}>{money(income - expenses, currency)}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{income - expenses >= 0 ? "Saving this month" : "Loss this month"}</p>
               </Card>
@@ -273,6 +341,7 @@ export default function Home() {
               <SectionTitle title="Payment Calendar" action="Add" onClick={() => setSheet({ kind: "payment" })} />
               <PaymentGroup title="Overdue" payments={overdue(state.payments)} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} onDelete={(id) => deleteRecord("payment", id)} />
               <PaymentGroup title="Due today" payments={state.payments.filter((p) => p.status !== "paid" && p.due_date === todayISO())} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} onDelete={(id) => deleteRecord("payment", id)} />
+              <PaymentGroup title="Due tomorrow" payments={dueTomorrow(state.payments)} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} onDelete={(id) => deleteRecord("payment", id)} />
               <PaymentGroup title="This week" payments={upcoming(state.payments, 7)} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} onDelete={(id) => deleteRecord("payment", id)} />
               <PaymentGroup title="This month" payments={state.payments.filter((p) => p.status !== "paid" && new Date(p.due_date).getMonth() === new Date().getMonth())} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} onDelete={(id) => deleteRecord("payment", id)} />
             </>
@@ -368,7 +437,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
       is_recurring: data.get("recurring") === "on",
       notes: String(data.get("notes") || ""),
     };
-    setState((s) => ({ ...s, current_cash: s.current_cash - (income?.amount || 0) + next.amount, incomes: income ? s.incomes.map((i) => (i.id === next.id ? next : i)) : [next, ...s.incomes] }));
+    setState((s) => ({ ...applyCashDelta(s, -(income?.amount || 0) + next.amount), incomes: income ? s.incomes.map((i) => (i.id === next.id ? next : i)) : [next, ...s.incomes] }));
     close();
   }
 
@@ -386,7 +455,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
       payment_method: String(data.get("method")),
       notes: String(data.get("notes") || ""),
     };
-    setState((s) => ({ ...s, current_cash: s.current_cash + (expense?.amount || 0) - next.amount, expenses: expense ? s.expenses.map((i) => (i.id === next.id ? next : i)) : [next, ...s.expenses] }));
+    setState((s) => ({ ...applyCashDelta(s, (expense?.amount || 0) - next.amount), expenses: expense ? s.expenses.map((i) => (i.id === next.id ? next : i)) : [next, ...s.expenses] }));
     close();
   }
 
@@ -421,6 +490,11 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
       due_date: String(data.get("due_date")),
       paid_date: payment?.paid_date,
       status: String(data.get("status")) as Payment["status"],
+      category: String(data.get("category") || ""),
+      priority: String(data.get("priority") || "medium") as Payment["priority"],
+      is_recurring: data.get("recurring") === "on",
+      recurring_day: Number(data.get("recurring_day") || 0) || undefined,
+      reminder_day: Number(data.get("reminder_day") || 0) || undefined,
       notes: String(data.get("notes") || ""),
     };
     setState((s) => ({ ...s, payments: payment ? s.payments.map((i) => (i.id === next.id ? next : i)) : [next, ...s.payments] }));
@@ -446,7 +520,15 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
   function saveSettings(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    setState((s) => ({ ...s, current_cash: Number(data.get("cash")), settings: { survival_buffer: Number(data.get("buffer")), salary_day: Number(data.get("salary_day")), currency: String(data.get("currency")), theme: String(data.get("theme")) as FinanceState["settings"]["theme"] } }));
+    const cash = Number(data.get("cash"));
+    setState((s) => ({
+      ...s,
+      current_cash: cash,
+      cash_accounts: s.cash_accounts.map((account, index, accounts) =>
+        index === accounts.length - 1 ? { ...account, amount: cash - sum(accounts.slice(0, -1), (item) => item.amount) } : account,
+      ),
+      settings: { survival_buffer: Number(data.get("buffer")), salary_day: Number(data.get("salary_day")), currency: String(data.get("currency")), theme: String(data.get("theme")) as FinanceState["settings"]["theme"], profile_version: seedState.settings.profile_version },
+    }));
     close();
   }
 
@@ -480,7 +562,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
           <Field label="Monthly payment"><Input name="monthly" type="number" step="0.01" defaultValue={debt?.monthly_payment || 0} required /></Field>
           <Field label="Due date"><Input name="due_date" type="date" defaultValue={debt?.due_date} /></Field>
           <Field label="Due day"><Input name="due_day" type="number" min="1" max="31" defaultValue={debt?.due_day} /></Field>
-          <Field label="Priority"><Select name="priority" defaultValue={debt?.priority || "medium"}><option>high</option><option>medium</option><option>low</option></Select></Field>
+          <Field label="Priority"><Select name="priority" defaultValue={debt?.priority || "medium"}><option>critical</option><option>high</option><option>medium</option><option>low</option></Select></Field>
           <Field label="Type"><Select name="type" defaultValue={debt?.debt_type}>{debtTypes.map((x) => <option key={x}>{x}</option>)}</Select></Field>
           <Field label="Status"><Select name="status" defaultValue={debt?.status || "active"}><option>active</option><option>paid</option></Select></Field>
           <Field label="Notes"><Textarea name="notes" defaultValue={debt?.notes} /></Field>
@@ -492,7 +574,14 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
           <Field label="Amount"><Input name="amount" type="number" step="0.01" defaultValue={payment?.amount} required /></Field>
           <Field label="Due date"><Input name="due_date" type="date" defaultValue={payment?.due_date || todayISO()} required /></Field>
           <Field label="Linked debt"><Select name="debt_id" defaultValue={payment?.debt_id || ""}><option value="">None</option>{state.debts.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}</Select></Field>
+          <Field label="Category"><Select name="category" defaultValue={payment?.category || "Other"}>{expenseCategories.map((x) => <option key={x}>{x}</option>)}</Select></Field>
+          <Field label="Priority"><Select name="priority" defaultValue={payment?.priority || "medium"}><option>critical</option><option>high</option><option>medium</option><option>low</option></Select></Field>
           <Field label="Status"><Select name="status" defaultValue={payment?.status || "unpaid"}><option>unpaid</option><option>paid</option><option>overdue</option></Select></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Recurring day"><Input name="recurring_day" type="number" min="1" max="31" defaultValue={payment?.recurring_day} /></Field>
+            <Field label="Reminder day"><Input name="reminder_day" type="number" min="1" max="31" defaultValue={payment?.reminder_day} /></Field>
+          </div>
+          <label className="flex items-center gap-2 text-sm font-semibold"><input name="recurring" type="checkbox" defaultChecked={payment?.is_recurring} /> Monthly recurring</label>
           <Field label="Notes"><Textarea name="notes" defaultValue={payment?.notes} /></Field>
         </Form>
       )}
@@ -541,6 +630,23 @@ function Quick({ icon, label, onClick }: { icon: IconName; label: string; onClic
 
 function Mini({ label, value }: { label: string; value: string }) {
   return <div className="rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.07]"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><p className="font-black">{value}</p></div>;
+}
+
+function AssetCard({ title, value, note }: { title: string; value: string; note: string }) {
+  return (
+    <Card className="border-emerald-200 bg-white/95 dark:border-emerald-500/20 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-black">{title}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{note}</p>
+        </div>
+        <span className="flex items-center gap-2 rounded-2xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+          <Icon name="crypto" />
+          {value}
+        </span>
+      </div>
+    </Card>
+  );
 }
 
 function Empty({ text }: { text: string }) {
@@ -622,12 +728,17 @@ function PaymentGroup({ title, payments, currency, onPaid, onEdit, onDelete }: {
 }
 
 function PaymentCard({ payment, currency, onPaid, onEdit, onDelete }: { payment: Payment; currency: string; onPaid: () => void; onEdit: () => void; onDelete?: () => void }) {
+  const critical = payment.priority === "critical" || payment.category === "Rent";
   return (
-    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.07]">
+    <div className={`rounded-2xl p-3 ${critical ? "bg-red-50 ring-1 ring-red-100 dark:bg-red-500/10 dark:ring-red-500/20" : "bg-slate-50 dark:bg-white/[0.07]"}`}>
       <div className="flex items-center justify-between gap-3">
-        <div><p className="text-sm font-bold">{payment.title}</p><p className="text-xs text-slate-500 dark:text-slate-400">Due {payment.due_date} · {payment.status}</p></div>
-        <p className="text-sm font-black">{money(payment.amount, currency)}</p>
+        <div>
+          <p className="text-sm font-bold text-slate-950 dark:text-white">{payment.title}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Due {payment.due_date} · {payment.category || "Payment"} · {payment.status}</p>
+        </div>
+        <p className={`text-sm font-black ${critical ? "text-red-600 dark:text-red-300" : "text-slate-950 dark:text-white"}`}>{money(payment.amount, currency)}</p>
       </div>
+      {critical && <p className="mt-2 rounded-xl bg-red-100 px-3 py-2 text-xs font-black text-red-700 dark:bg-red-500/15 dark:text-red-300">Rent must be paid first</p>}
       <div className="mt-3 flex gap-2">
         {payment.status !== "paid" && <GhostButton className="flex-1 py-2" onClick={onPaid}>Paid</GhostButton>}
         <GhostButton className="flex-1 py-2" onClick={onEdit}>Edit</GhostButton>
@@ -693,6 +804,12 @@ function Icon({ name }: { name: IconName }) {
     settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM4 12h2M18 12h2M12 4v2M12 18v2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4",
     sun: "M12 4V2M12 22v-2M4 12H2M22 12h-2M5 5 3.6 3.6M20.4 20.4 19 19M19 5l1.4-1.4M3.6 20.4 5 19M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8",
     moon: "M21 14.5A7.5 7.5 0 0 1 9.5 3a8.5 8.5 0 1 0 11.5 11.5",
+    wallet: "M4 7h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12M16 13h5M17 13.5h.01",
+    bank: "M3 10h18M5 10l7-5 7 5M6 10v8M10 10v8M14 10v8M18 10v8M4 18h16M3 21h18",
+    warning: "M12 9v4M12 17h.01M10.3 4.4 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.4a2 2 0 0 0-3.4 0Z",
+    crypto: "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3ZM8 9.5h6a2 2 0 0 1 0 4H8M9.5 7v10M13 7v2.5M13 13.5V17",
+    office: "M4 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16M8 7h1M12 7h1M8 11h1M12 11h1M8 15h1M12 15h1M3 21h18",
+    check: "M20 6 9 17l-5-5",
   };
 
   return (

@@ -25,6 +25,9 @@ export const sum = <T>(items: T[], pick: (item: T) => number) =>
 export const upcoming = (payments: Payment[], days: number) =>
   payments.filter((p) => p.status !== "paid" && daysFromNow(p.due_date) >= 0 && daysFromNow(p.due_date) <= days);
 
+export const dueTomorrow = (payments: Payment[]) =>
+  payments.filter((p) => p.status !== "paid" && daysFromNow(p.due_date) === 1);
+
 export const overdue = (payments: Payment[]) =>
   payments.filter((p) => p.status !== "paid" && daysFromNow(p.due_date) < 0);
 
@@ -37,8 +40,25 @@ export const monthlyExpenses = (state: FinanceState) =>
 export const totalDebt = (debts: Debt[]) =>
   sum(debts.filter((d) => d.status === "active"), (d) => d.remaining_amount);
 
+export const rentDue = (state: FinanceState) =>
+  sum(state.payments.filter((p) => p.status !== "paid" && p.category === "Rent"), (p) => p.amount);
+
+export const freeCashAfterRent = (state: FinanceState) =>
+  safeCash(state) - rentDue(state);
+
+export const safeCash = (state: FinanceState) =>
+  state.cash_accounts?.length
+    ? sum(state.cash_accounts.filter((account) => account.include_in_safe), (account) => account.amount)
+    : state.current_cash;
+
 export const safeToSpend = (state: FinanceState) =>
-  state.current_cash - sum(upcoming(state.payments, 15), (p) => p.amount) - state.settings.survival_buffer;
+  Math.max(
+    0,
+    safeCash(state) -
+      rentDue(state) -
+      sum(upcoming(state.payments, 15).filter((payment) => payment.category !== "Rent"), (p) => p.amount) -
+      state.settings.survival_buffer,
+  );
 
 export const debtPaidThisMonth = (state: FinanceState) =>
   sum(state.payments.filter((p) => p.status === "paid" && p.paid_date && isSameMonth(p.paid_date)), (p) => p.amount);
