@@ -381,7 +381,7 @@ export default function Home() {
 
   if (!authed) {
     return (
-      <main className={`${isDark ? "dark" : ""} flex min-h-dvh items-center justify-center bg-[#F3F6FA] px-5 dark:bg-slate-950`}>
+    <main className={`${isDark ? "dark" : ""} min-w-0 overflow-x-hidden flex min-h-dvh items-center justify-center bg-[#F3F6FA] px-5 dark:bg-slate-950`}>
         <Card className="w-full max-w-sm p-6">
           <div className="mb-8">
             <p className="text-sm font-semibold text-emerald-600">HisabLock</p>
@@ -398,8 +398,8 @@ export default function Home() {
   }
 
   return (
-    <main className={`${isDark ? "dark" : ""} min-h-dvh bg-[#F5F7FB] text-slate-950 dark:bg-[radial-gradient(circle_at_top,#064E3B_0,#020617_42%,#0F172A_100%)] dark:text-white`}>
-      <div className="mx-auto min-h-dvh w-full max-w-md bg-[linear-gradient(180deg,#FFFFFF_0%,#F3F7FB_48%,#EEF4F8_100%)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-[linear-gradient(180deg,#07131F_0%,#020617_100%)] md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
+    <main className={`${isDark ? "dark" : ""} min-h-dvh min-w-0 overflow-x-hidden bg-[#F5F7FB] text-slate-950 dark:bg-[radial-gradient(circle_at_top,#064E3B_0,#020617_42%,#0F172A_100%)] dark:text-white`}>
+      <div className="mx-auto min-h-dvh w-full max-w-md min-w-0 overflow-x-hidden bg-[linear-gradient(180deg,#FFFFFF_0%,#F3F7FB_48%,#EEF4F8_100%)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-[linear-gradient(180deg,#07131F_0%,#020617_100%)] md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
         <header className="sticky top-0 z-20 bg-white/75 px-5 pb-3 pt-[calc(1.1rem+env(safe-area-inset-top))] backdrop-blur-2xl dark:bg-slate-950/70">
           <div className="flex items-center justify-between">
             <div>
@@ -417,7 +417,7 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="grid gap-4 px-5 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-4">
+        <div className="grid min-w-0 gap-4 overflow-x-hidden px-5 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-4">
           {tab === "Home" && (
             <>
               <Card className="overflow-hidden !bg-[linear-gradient(145deg,#111827_0%,#020617_100%)] p-5 !text-white ring-1 ring-white/40 dark:!bg-slate-900">
@@ -442,7 +442,7 @@ export default function Home() {
               </Card>
 
               <Card className="border-emerald-100 bg-white p-4 dark:border-emerald-500/15 dark:bg-emerald-500/10">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid min-w-0 grid-cols-2 gap-3">
                   <Mini label="Reserved for Rent" value={money(rentAmount, currency)} />
                   <Mini label="Free After Rent" value={money(freeAfterRent, currency)} />
                 </div>
@@ -457,7 +457,7 @@ export default function Home() {
 
               {safe >= 100 && upcoming15Total + rentAmount > availableCash && <Alert text="Upcoming payments are greater than your available cash." tone="red" />}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid min-w-0 grid-cols-2 gap-3">
                 <StatCard label="Upcoming 7 days" value={money(upcoming7Total, currency)} tone="amber" />
                 <StatCard label="Upcoming 15 days" value={money(upcoming15Total, currency)} tone="amber" />
                 <StatCard label="Total Debt" value={money(debt, currency)} tone="red" />
@@ -490,7 +490,7 @@ export default function Home() {
                 <ProgressBar value={100 - (debt / Math.max(1, sum(state.debts, (d) => d.total_amount))) * 100} />
               </Card>
 
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid min-w-0 grid-cols-4 gap-2">
                 <Quick icon="income" label="Income" onClick={() => setSheet({ kind: "income" })} />
                 <Quick icon="expense" label="Expense" onClick={() => setSheet({ kind: "expense" })} />
                 <Quick icon="card" label="Debt" onClick={() => setSheet({ kind: "debt" })} />
@@ -578,7 +578,7 @@ export default function Home() {
                 <p className="mt-1 text-sm font-bold text-emerald-600">{scoreLabel(score)}</p>
                 <ProgressBar value={score} tone={score >= 80 ? "emerald" : score >= 60 ? "amber" : "red"} />
               </Card>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid min-w-0 grid-cols-2 gap-3">
                 <StatCard label="Income" value={money(income, currency)} tone="green" />
                 <StatCard label="Expenses" value={money(expenses, currency)} tone="red" />
                 <StatCard label="Debt paid" value={money(debtPaidThisMonth(state), currency)} />
@@ -604,7 +604,7 @@ export default function Home() {
           )}
         </div>
 
-        <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:bottom-6">
+        <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md min-w-0 overflow-hidden px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:bottom-6">
           <div className="grid grid-cols-5 items-end gap-1 rounded-[30px] border border-white/70 bg-white/95 p-2 shadow-[0_20px_55px_rgba(15,23,42,0.20)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/[0.94] dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
             {navItems.map((item) => {
               const active = tab === item.tab;
@@ -811,7 +811,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
           <Field label="Category"><Select name="category" defaultValue={payment?.category || "Other"}>{expenseCategories.map((x) => <option key={x}>{x}</option>)}</Select></Field>
           <Field label="Priority"><Select name="priority" defaultValue={payment?.priority || "medium"}><option>critical</option><option>high</option><option>medium</option><option>low</option></Select></Field>
           <Field label="Status"><Select name="status" defaultValue={payment?.status || "unpaid"}><option>unpaid</option><option>paid</option><option>overdue</option></Select></Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid min-w-0 grid-cols-2 gap-3">
             <Field label="Recurring day"><Input name="recurring_day" type="number" min="1" max="31" defaultValue={payment?.recurring_day} /></Field>
             <Field label="Reminder day"><Input name="reminder_day" type="number" min="1" max="31" defaultValue={payment?.reminder_day} /></Field>
           </div>
@@ -852,7 +852,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
 }
 
 function Form({ children, onSubmit }: { children: ReactNode; onSubmit: (e: FormEvent<HTMLFormElement>) => void }) {
-  return <form className="grid gap-4" onSubmit={onSubmit}>{children}<Button>Save</Button></form>;
+  return <form className="grid min-w-0 gap-4 overflow-x-hidden" onSubmit={onSubmit}>{children}<Button>Save</Button></form>;
 }
 
 function Alert({ text, tone }: { text: string; tone: "red" | "amber" }) {
@@ -861,17 +861,17 @@ function Alert({ text, tone }: { text: string; tone: "red" | "amber" }) {
 
 function Quick({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-2 rounded-[22px] bg-white p-3 text-center text-xs font-black text-slate-700 shadow-[0_10px_28px_rgba(15,23,42,0.06)] ring-1 ring-slate-100 active:scale-[0.98] dark:bg-slate-900/88 dark:text-slate-200 dark:ring-white/10">
+    <button onClick={onClick} className="min-w-0 flex flex-col items-center gap-2 rounded-[22px] bg-white p-3 text-center text-xs font-black text-slate-700 shadow-[0_10px_28px_rgba(15,23,42,0.06)] ring-1 ring-slate-100 active:scale-[0.98] dark:bg-slate-900/88 dark:text-slate-200 dark:ring-white/10">
       <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-slate-950 text-white shadow-[0_10px_22px_rgba(15,23,42,0.18)] dark:bg-emerald-500 dark:text-slate-950">
         <Icon name={icon} />
       </span>
-      {label}
+      <span className="max-w-full truncate">{label}</span>
     </button>
   );
 }
 
 function Mini({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-white/[0.07] dark:ring-white/10"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><p className="font-black">{value}</p></div>;
+  return <div className="min-w-0 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-white/[0.07] dark:ring-white/10"><p className="truncate text-xs text-slate-500 dark:text-slate-400">{label}</p><p className="truncate font-black">{value}</p></div>;
 }
 
 function AssetCard({ title, value, note }: { title: string; value: string; note: string }) {
@@ -896,14 +896,14 @@ function Empty({ text }: { text: string }) {
 }
 
 function SectionTitle({ title, action, onClick }: { title: string; action: string; onClick: () => void }) {
-  return <div className="flex items-center justify-between"><h2 className="text-xl font-black">{title}</h2><button className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] dark:bg-emerald-500 dark:text-slate-950" onClick={onClick}>{action}</button></div>;
+  return <div className="flex min-w-0 items-center justify-between gap-3"><h2 className="min-w-0 truncate text-xl font-black">{title}</h2><button className="shrink-0 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] dark:bg-emerald-500 dark:text-slate-950" onClick={onClick}>{action}</button></div>;
 }
 
 function FilterDropdown({ value, options, onChange }: { value: string; options: string[]; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative w-44">
+    <div className="relative w-40 max-w-[58vw] shrink-0">
       <button
         type="button"
         onClick={() => setOpen((item) => !item)}
@@ -913,7 +913,7 @@ function FilterDropdown({ value, options, onChange }: { value: string; options: 
         <span className={`text-emerald-500 transition ${open ? "rotate-180" : ""}`}>⌄</span>
       </button>
       {open && (
-        <div className="absolute bottom-14 right-0 z-[90] w-56 overflow-hidden rounded-3xl border border-white/70 bg-white/95 p-2 shadow-[0_22px_60px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
+        <div className="absolute bottom-14 right-0 z-[90] w-[min(14rem,calc(100vw-3.5rem))] overflow-hidden rounded-3xl border border-white/70 bg-white/95 p-2 shadow-[0_22px_60px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
           <div className="premium-scroll max-h-56 overflow-y-auto pr-1">
             {options.map((item) => (
               <button

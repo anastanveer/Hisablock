@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_14px_38px_rgba(15,23,42,0.07)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/88 dark:shadow-[0_18px_70px_rgba(0,0,0,0.35)] ${className}`}>{children}</section>;
+  return <section className={`min-w-0 overflow-hidden rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_14px_38px_rgba(15,23,42,0.07)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/88 dark:shadow-[0_18px_70px_rgba(0,0,0,0.35)] ${className}`}>{children}</section>;
 }
 
 export function Button({ className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -70,13 +70,13 @@ export function StatCard({ label, value, tone = "slate" }: { label: string; valu
 
 export function Sheet({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/55 px-3 pb-3 pt-12 backdrop-blur-sm">
-      <div className="mx-auto flex max-h-full max-w-md flex-col rounded-t-[30px] border border-white/70 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-white/10">
-          <h2 className="text-base font-bold text-slate-950 dark:text-white">{title}</h2>
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/55 px-3 pb-3 pt-12 backdrop-blur-sm">
+      <div className="mx-auto flex max-h-full w-full max-w-md min-w-0 flex-col overflow-hidden rounded-t-[30px] border border-white/70 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950">
+        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-white/10">
+          <h2 className="min-w-0 truncate text-base font-bold text-slate-950 dark:text-white">{title}</h2>
           <button className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-bold text-slate-700 dark:bg-white/10 dark:text-slate-200" onClick={onClose}>Close</button>
         </div>
-        <div className="premium-scroll min-h-0 overflow-y-auto p-5 pr-4">{children}</div>
+        <div className="premium-scroll min-h-0 min-w-0 overflow-x-hidden overflow-y-auto p-5 pr-4">{children}</div>
       </div>
     </div>
   );

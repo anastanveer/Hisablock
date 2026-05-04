@@ -19,6 +19,8 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   overscroll-behavior-y: none;
+  overflow-x: hidden;
+  touch-action: pan-y;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -27,14 +29,19 @@ input,
 select,
 textarea {
   font: inherit;
+  max-width: 100%;
+  min-width: 0;
 }
 
 * {
+  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 * {
