@@ -61,6 +61,7 @@ export interface Settings {
   survival_buffer: number;
   salary_day: number;
   currency: string;
+  theme: "light" | "dark";
 }
 
 export interface FinanceState {

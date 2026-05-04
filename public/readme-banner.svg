@@ -1,46 +1,175 @@
-<svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="520" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0F172A"/>
-      <stop offset="0.48" stop-color="#123B3A"/>
-      <stop offset="1" stop-color="#10B981"/>
+    <!-- Deep gradient background -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f0c29"/>
+      <stop offset="0.5" stop-color="#302b63"/>
+      <stop offset="1" stop-color="#24243e"/>
     </linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#020617" flood-opacity="0.32"/>
+
+    <!-- Shimmer sweep -->
+    <linearGradient id="shimmer" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(255,255,255,0)"/>
+      <stop offset="50%" stop-color="rgba(255,255,255,0.06)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+      <animateTransform attributeName="gradientTransform" type="translate" from="-1200 0" to="1200 0" dur="3.5s" repeatCount="indefinite"/>
+    </linearGradient>
+
+    <!-- Glow filter for orbs -->
+    <filter id="orb-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="30" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+
+    <!-- Text glow -->
+    <filter id="text-glow" x="-20%" y="-40%" width="140%" height="180%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Card shadow -->
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+
+    <!-- Clip for rounded corners -->
+    <clipPath id="round">
+      <rect width="1200" height="320" rx="18"/>
+    </clipPath>
   </defs>
-  <rect width="1200" height="520" rx="42" fill="url(#bg)"/>
-  <circle cx="1010" cy="90" r="150" fill="#34D399" opacity="0.16">
-    <animate attributeName="r" values="130;170;130" dur="5s" repeatCount="indefinite"/>
+
+  <!-- Background -->
+  <rect width="1200" height="320" rx="18" fill="url(#bg)"/>
+  <rect width="1200" height="320" rx="18" fill="url(#shimmer)"/>
+
+  <!-- Floating orbs (left side atmosphere) -->
+  <circle cx="100" cy="80" r="90" fill="#7c3aed" opacity="0.22" filter="url(#orb-glow)">
+    <animate attributeName="cy" values="80;110;80" dur="5s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="90;110;90" dur="5s" repeatCount="indefinite"/>
   </circle>
-  <circle cx="170" cy="425" r="160" fill="#60A5FA" opacity="0.13">
-    <animate attributeName="cy" values="425;385;425" dur="6s" repeatCount="indefinite"/>
+  <circle cx="50" cy="260" r="70" fill="#2563eb" opacity="0.18" filter="url(#orb-glow)">
+    <animate attributeName="cy" values="260;230;260" dur="6s" repeatCount="indefinite"/>
   </circle>
-  <g filter="url(#shadow)">
-    <rect x="706" y="58" width="300" height="404" rx="38" fill="#F8FAFC"/>
-    <rect x="730" y="90" width="252" height="94" rx="26" fill="#0F172A"/>
-    <text x="754" y="123" fill="#A7F3D0" font-family="Arial, sans-serif" font-size="15" font-weight="700">Safe to Spend</text>
-    <text x="754" y="158" fill="white" font-family="Arial, sans-serif" font-size="30" font-weight="900">AED 1,401.06</text>
-    <rect x="730" y="206" width="116" height="74" rx="20" fill="#ECFDF5"/>
-    <rect x="866" y="206" width="116" height="74" rx="20" fill="#FEF3C7"/>
-    <rect x="730" y="302" width="252" height="46" rx="18" fill="#F1F5F9"/>
-    <rect x="730" y="366" width="252" height="46" rx="18" fill="#F1F5F9"/>
-    <rect x="748" y="320" width="150" height="10" rx="5" fill="#10B981">
-      <animate attributeName="width" values="80;190;150" dur="4s" repeatCount="indefinite"/>
-    </rect>
-    <rect x="748" y="384" width="108" height="10" rx="5" fill="#F59E0B">
-      <animate attributeName="width" values="60;160;108" dur="4.5s" repeatCount="indefinite"/>
-    </rect>
-  </g>
-  <text x="92" y="150" fill="#A7F3D0" font-family="Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="4">HISAB PRO</text>
-  <text x="90" y="220" fill="white" font-family="Arial, sans-serif" font-size="66" font-weight="900">Money Control</text>
-  <text x="94" y="268" fill="#D1FAE5" font-family="Arial, sans-serif" font-size="28" font-weight="600">Mobile-first finance control app</text>
-  <rect x="94" y="322" width="170" height="50" rx="25" fill="#10B981">
-    <animate attributeName="opacity" values="0.75;1;0.75" dur="2.8s" repeatCount="indefinite"/>
+
+  <!-- Stars (twinkling particles) -->
+  <circle cx="680" cy="40" r="1.5" fill="white" opacity="0.7"><animate attributeName="opacity" values="0.7;0.1;0.7" dur="2.1s" repeatCount="indefinite"/></circle>
+  <circle cx="720" cy="100" r="1" fill="#a78bfa" opacity="0.6"><animate attributeName="opacity" values="0.6;0.1;0.6" dur="1.8s" repeatCount="indefinite"/></circle>
+  <circle cx="640" cy="270" r="1.5" fill="white" opacity="0.5"><animate attributeName="opacity" values="0.5;0.9;0.5" dur="2.6s" repeatCount="indefinite"/></circle>
+  <circle cx="580" cy="60" r="1" fill="#38bdf8" opacity="0.6"><animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.5s" repeatCount="indefinite"/></circle>
+  <circle cx="550" cy="280" r="1.5" fill="white" opacity="0.4"><animate attributeName="opacity" values="0.4;0.8;0.4" dur="3s" repeatCount="indefinite"/></circle>
+  <circle cx="500" cy="140" r="1" fill="#f0abfc" opacity="0.5"><animate attributeName="opacity" values="0.5;0.9;0.5" dur="2.2s" repeatCount="indefinite"/></circle>
+
+  <!-- ===== LEFT TEXT SECTION ===== -->
+
+  <!-- Tag line -->
+  <text x="80" y="108" fill="#a78bfa" font-family="'Segoe UI',Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="5" opacity="0">
+    HISAB · LOCK · CONTROL
+    <animate attributeName="opacity" values="0;0.9" dur="0.6s" begin="0.1s" fill="freeze"/>
+  </text>
+
+  <!-- Main title -->
+  <text x="74" y="190" fill="white" font-family="'Segoe UI',Arial,sans-serif" font-size="72" font-weight="900" filter="url(#text-glow)" opacity="0">
+    HisabLock
+    <animate attributeName="opacity" values="0;1" dur="0.7s" begin="0.3s" fill="freeze"/>
+    <animate attributeName="x" values="60;74" dur="0.7s" begin="0.3s" fill="freeze"/>
+  </text>
+
+  <!-- Subtitle -->
+  <text x="80" y="226" fill="#cbd5e1" font-family="'Segoe UI',Arial,sans-serif" font-size="20" font-weight="400" opacity="0">
+    Personal Finance — Offline First, PIN Locked
+    <animate attributeName="opacity" values="0;0.85" dur="0.6s" begin="0.7s" fill="freeze"/>
+  </text>
+
+  <!-- Pill tags -->
+  <!-- Tag 1 -->
+  <rect x="80" y="256" width="96" height="28" rx="14" fill="#4f46e5" opacity="0">
+    <animate attributeName="opacity" values="0;0.85" dur="0.4s" begin="1s" fill="freeze"/>
   </rect>
-  <text x="124" y="354" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="800">Track Cash</text>
-  <rect x="282" y="322" width="174" height="50" rx="25" fill="white" opacity="0.14"/>
-  <text x="314" y="354" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="800">Pay Debts</text>
-  <rect x="474" y="322" width="206" height="50" rx="25" fill="white" opacity="0.14"/>
-  <text x="504" y="354" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="800">Save Monthly</text>
+  <text x="128" y="274" text-anchor="middle" fill="white" font-family="'Segoe UI',Arial,sans-serif" font-size="12" font-weight="600" opacity="0">
+    Next.js 16
+    <animate attributeName="opacity" values="0;1" dur="0.4s" begin="1s" fill="freeze"/>
+  </text>
+
+  <!-- Tag 2 -->
+  <rect x="186" y="256" width="88" height="28" rx="14" fill="#0891b2" opacity="0">
+    <animate attributeName="opacity" values="0;0.85" dur="0.4s" begin="1.1s" fill="freeze"/>
+  </rect>
+  <text x="230" y="274" text-anchor="middle" fill="white" font-family="'Segoe UI',Arial,sans-serif" font-size="12" font-weight="600" opacity="0">
+    React 19
+    <animate attributeName="opacity" values="0;1" dur="0.4s" begin="1.1s" fill="freeze"/>
+  </text>
+
+  <!-- Tag 3 -->
+  <rect x="284" y="256" width="110" height="28" rx="14" fill="#059669" opacity="0">
+    <animate attributeName="opacity" values="0;0.85" dur="0.4s" begin="1.2s" fill="freeze"/>
+  </rect>
+  <text x="339" y="274" text-anchor="middle" fill="white" font-family="'Segoe UI',Arial,sans-serif" font-size="12" font-weight="600" opacity="0">
+    TypeScript 5
+    <animate attributeName="opacity" values="0;1" dur="0.4s" begin="1.2s" fill="freeze"/>
+  </text>
+
+  <!-- Tag 4 -->
+  <rect x="404" y="256" width="90" height="28" rx="14" fill="#7c3aed" opacity="0">
+    <animate attributeName="opacity" values="0;0.85" dur="0.4s" begin="1.3s" fill="freeze"/>
+  </rect>
+  <text x="449" y="274" text-anchor="middle" fill="white" font-family="'Segoe UI',Arial,sans-serif" font-size="12" font-weight="600" opacity="0">
+    Supabase
+    <animate attributeName="opacity" values="0;1" dur="0.4s" begin="1.3s" fill="freeze"/>
+  </text>
+
+  <!-- ===== RIGHT CARD (phone mockup) ===== -->
+  <g filter="url(#card-shadow)" opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.8s" begin="0.5s" fill="freeze"/>
+
+    <!-- Card background -->
+    <rect x="750" y="30" width="400" height="260" rx="24" fill="#1e1b4b"/>
+    <rect x="750" y="30" width="400" height="260" rx="24" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-opacity="0.5"/>
+
+    <!-- Card header -->
+    <rect x="750" y="30" width="400" height="62" rx="24" fill="#312e81"/>
+    <rect x="750" y="68" width="400" height="24" fill="#312e81"/>
+
+    <text x="800" y="57" fill="#a5b4fc" font-family="'Segoe UI',Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="2">SAFE TO SPEND</text>
+    <text x="800" y="82" fill="white" font-family="'Segoe UI',Arial,sans-serif" font-size="26" font-weight="900">AED 1,401.06</text>
+
+    <!-- Score section -->
+    <text x="800" y="115" fill="#64748b" font-family="'Segoe UI',Arial,sans-serif" font-size="11">Financial Score</text>
+    <rect x="800" y="122" width="280" height="8" rx="4" fill="#1e293b"/>
+    <rect x="800" y="122" width="0" height="8" rx="4" fill="#4f46e5">
+      <animate attributeName="width" values="0;196" dur="1.2s" begin="1.2s" fill="freeze"/>
+    </rect>
+    <text x="1090" y="132" text-anchor="end" fill="#a5b4fc" font-family="'Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">70/100</text>
+
+    <!-- Mini stats row -->
+    <!-- Income box -->
+    <rect x="800" y="148" width="118" height="54" rx="12" fill="#0f172a"/>
+    <text x="810" y="167" fill="#64748b" font-family="'Segoe UI',Arial,sans-serif" font-size="10">Monthly Income</text>
+    <text x="810" y="190" fill="#34d399" font-family="'Segoe UI',Arial,sans-serif" font-size="16" font-weight="800">AED 5,200</text>
+
+    <!-- Expense box -->
+    <rect x="930" y="148" width="118" height="54" rx="12" fill="#0f172a"/>
+    <text x="940" y="167" fill="#64748b" font-family="'Segoe UI',Arial,sans-serif" font-size="10">Expenses</text>
+    <text x="940" y="190" fill="#f87171" font-family="'Segoe UI',Arial,sans-serif" font-size="16" font-weight="800">AED 2,400</text>
+
+    <!-- Upcoming payments -->
+    <rect x="800" y="216" width="248" height="52" rx="12" fill="#0f172a"/>
+    <text x="814" y="234" fill="#64748b" font-family="'Segoe UI',Arial,sans-serif" font-size="10">Upcoming 15-day Payments</text>
+
+    <!-- Payment 1 -->
+    <circle cx="814" cy="252" r="3" fill="#fb923c"/>
+    <text x="824" y="256" fill="#cbd5e1" font-family="'Segoe UI',Arial,sans-serif" font-size="11">Tabby — AED 350</text>
+
+    <!-- Due indicator -->
+    <rect x="932" y="245" width="50" height="16" rx="8" fill="#b45309" opacity="0.4"/>
+    <text x="957" y="257" text-anchor="middle" fill="#fbbf24" font-family="'Segoe UI',Arial,sans-serif" font-size="9" font-weight="700">3 days</text>
+
+    <!-- Pulsing dot (live indicator) -->
+    <circle cx="1120" cy="55" r="5" fill="#34d399">
+      <animate attributeName="r" values="5;8;5" dur="1.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Bottom border glow -->
+  <rect x="1" y="1" width="1198" height="318" rx="18" fill="none" stroke="#4f46e5" stroke-width="1" opacity="0.3"/>
 </svg>

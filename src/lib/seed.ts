@@ -6,6 +6,7 @@ export const seedState: FinanceState = {
     survival_buffer: 1000,
     salary_day: 1,
     currency: "AED",
+    theme: "light",
   },
   incomes: [
     {

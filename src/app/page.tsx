@@ -16,7 +16,7 @@ const debtTypes = ["credit card", "loan", "Tabby", "office", "family", "other"];
 const paymentMethods = ["Cash", "Debit Card", "Credit Card", "Bank Transfer", "Other"];
 
 type Tab = "Home" | "Add" | "Calendar" | "Debts" | "Summary";
-type IconName = "home" | "plus" | "calendar" | "card" | "chart" | "income" | "expense" | "settings";
+type IconName = "home" | "plus" | "calendar" | "card" | "chart" | "income" | "expense" | "settings" | "sun" | "moon";
 type SheetKind = "income" | "expense" | "debt" | "payment" | "goal" | "settings";
 
 const navItems: { tab: Tab; icon: IconName }[] = [
@@ -26,6 +26,14 @@ const navItems: { tab: Tab; icon: IconName }[] = [
   { tab: "Debts", icon: "card" },
   { tab: "Summary", icon: "chart" },
 ];
+
+const normalizeState = (value: FinanceState): FinanceState => ({
+  ...value,
+  settings: {
+    ...seedState.settings,
+    ...value.settings,
+  },
+});
 
 export default function Home() {
   const [state, setState] = useState<FinanceState>(seedState);
@@ -40,7 +48,7 @@ export default function Home() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(DATA_KEY);
-      setState(saved ? JSON.parse(saved) : seedState);
+      setState(saved ? normalizeState(JSON.parse(saved)) : seedState);
     } catch {
       localStorage.setItem(DATA_KEY, JSON.stringify(seedState));
       setState(seedState);
@@ -62,6 +70,7 @@ export default function Home() {
   }, [hydrated, state]);
 
   const currency = state.settings.currency;
+  const isDark = state.settings.theme === "dark";
   const income = monthlyIncome(state);
   const expenses = monthlyExpenses(state);
   const debt = totalDebt(state.debts);
@@ -96,6 +105,10 @@ export default function Home() {
   function resetData() {
     localStorage.setItem(DATA_KEY, JSON.stringify(seedState));
     setState(seedState);
+  }
+
+  function toggleTheme() {
+    setState((s) => ({ ...s, settings: { ...s.settings, theme: s.settings.theme === "dark" ? "light" : "dark" } }));
   }
 
   function deleteRecord(kind: SheetKind, id: string) {
@@ -142,12 +155,12 @@ export default function Home() {
 
   if (!authed) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-[#F3F6FA] px-5">
+      <main className={`${isDark ? "dark" : ""} flex min-h-dvh items-center justify-center bg-[#F3F6FA] px-5 dark:bg-slate-950`}>
         <Card className="w-full max-w-sm p-6">
           <div className="mb-8">
             <p className="text-sm font-semibold text-emerald-600">Hisab Pro</p>
-            <h1 className="mt-2 text-3xl font-black text-slate-950">Money Control</h1>
-            <p className="mt-2 text-sm text-slate-500">{hasPin ? "Enter your PIN" : "Create a 4 digit PIN"}</p>
+            <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white">Money Control</h1>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{hasPin ? "Enter your PIN" : "Create a 4 digit PIN"}</p>
           </div>
           <form className="grid gap-4" onSubmit={login}>
             <Input inputMode="numeric" minLength={4} maxLength={8} type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" required />
@@ -159,21 +172,26 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-dvh bg-[radial-gradient(circle_at_top,#dff8ef_0,#f3f6fa_42%,#eef2f7_100%)] text-slate-950">
+    <main className={`${isDark ? "dark" : ""} min-h-dvh bg-[radial-gradient(circle_at_top,#dff8ef_0,#f3f6fa_42%,#eef2f7_100%)] text-slate-950 dark:bg-[radial-gradient(circle_at_top,#064E3B_0,#020617_42%,#0F172A_100%)] dark:text-white`}>
       <div className="mx-auto min-h-dvh w-full max-w-md bg-transparent pb-28 shadow-2xl md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
-        <header className="sticky top-0 z-20 bg-[#F3F6FA]/80 px-5 pb-3 pt-5 backdrop-blur-xl">
+        <header className="sticky top-0 z-20 bg-[#F3F6FA]/80 px-5 pb-3 pt-5 backdrop-blur-xl dark:bg-slate-950/65">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600">Hisab Pro</p>
               <h1 className="text-2xl font-black">Money Control</h1>
             </div>
-            <button className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-900 shadow-[0_10px_28px_rgba(15,23,42,0.10)]" onClick={() => setSheet({ kind: "settings" })} aria-label="Settings">
-              <Icon name="settings" />
-            </button>
+            <div className="flex gap-2">
+              <button className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-900 shadow-[0_10px_28px_rgba(15,23,42,0.10)] dark:bg-white/10 dark:text-white" onClick={toggleTheme} aria-label="Toggle theme">
+                <Icon name={isDark ? "sun" : "moon"} />
+              </button>
+              <button className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-900 shadow-[0_10px_28px_rgba(15,23,42,0.10)] dark:bg-white/10 dark:text-white" onClick={() => setSheet({ kind: "settings" })} aria-label="Settings">
+                <Icon name="settings" />
+              </button>
+            </div>
           </div>
         </header>
 
-        <div className="grid gap-4 px-5">
+        <div className="grid gap-4 px-5 pt-4">
           {tab === "Home" && (
             <>
               <Card className={`${safe < 0 ? "bg-red-600" : "bg-slate-950"} overflow-hidden p-5 text-white ring-1 ring-white/40`}>
@@ -192,7 +210,7 @@ export default function Home() {
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold">Debt Progress</p>
-                    <p className="text-xs text-slate-500">{money(debt, currency)} remaining</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{money(debt, currency)} remaining</p>
                   </div>
                   <p className="text-sm font-black">{Math.round(100 - (debt / Math.max(1, sum(state.debts, (d) => d.total_amount))) * 100)}%</p>
                 </div>
@@ -210,12 +228,14 @@ export default function Home() {
                   <Mini label="Next 7 days" value={money(sum(upcoming7, (p) => p.amount), currency)} />
                   <Mini label="Next 15 days" value={money(upcoming15Total, currency)} />
                 </div>
-                <ListPayments payments={upcoming15} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} />
+                <div className="mt-3">
+                  <ListPayments payments={upcoming15} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} />
+                </div>
               </Card>
               <Card>
                 <h2 className="mb-2 text-base font-bold">Monthly Result</h2>
                 <p className={`text-2xl font-black ${income - expenses >= 0 ? "text-emerald-600" : "text-red-600"}`}>{money(income - expenses, currency)}</p>
-                <p className="text-sm text-slate-500">{income - expenses >= 0 ? "Saving this month" : "Loss this month"}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{income - expenses >= 0 ? "Saving this month" : "Loss this month"}</p>
               </Card>
             </>
           )}
@@ -273,7 +293,7 @@ export default function Home() {
           {tab === "Summary" && (
             <>
               <Card>
-                <p className="text-sm font-semibold text-slate-500">Financial Score</p>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Financial Score</p>
                 <p className="mt-1 text-5xl font-black">{score}</p>
                 <p className="mt-1 text-sm font-bold text-emerald-600">{scoreLabel(score)}</p>
                 <ProgressBar value={score} tone={score >= 80 ? "emerald" : score >= 60 ? "amber" : "red"} />
@@ -305,7 +325,7 @@ export default function Home() {
         </div>
 
         <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-4 pb-4 md:bottom-6">
-          <div className="grid grid-cols-5 items-end gap-1 rounded-[30px] border border-white/70 bg-white/95 p-2 shadow-[0_20px_55px_rgba(15,23,42,0.20)] backdrop-blur-xl">
+          <div className="grid grid-cols-5 items-end gap-1 rounded-[30px] border border-white/70 bg-white/95 p-2 shadow-[0_20px_55px_rgba(15,23,42,0.20)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/[0.94] dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
             {navItems.map((item) => {
               const active = tab === item.tab;
               const isAdd = item.tab === "Add";
@@ -313,9 +333,9 @@ export default function Home() {
                 <button
                   key={item.tab}
                   onClick={() => setTab(item.tab)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-black transition active:scale-95 ${isAdd ? "-mt-8" : "h-14"} ${active ? "text-slate-950" : "text-slate-400"}`}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-black transition active:scale-95 ${isAdd ? "-mt-8" : "h-14"} ${active ? "text-slate-950 dark:text-white" : "text-slate-400 dark:text-slate-500"}`}
                 >
-                  <span className={`grid place-items-center ${isAdd ? "h-16 w-16 rounded-full bg-emerald-500 text-white shadow-[0_14px_32px_rgba(16,185,129,0.45)] ring-4 ring-[#F3F6FA]" : `h-8 w-8 rounded-2xl ${active ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-500"}`}`}>
+                  <span className={`grid place-items-center ${isAdd ? "h-16 w-16 rounded-full bg-emerald-500 text-white shadow-[0_14px_32px_rgba(16,185,129,0.45)] ring-4 ring-[#F3F6FA] dark:ring-slate-950" : `h-8 w-8 rounded-2xl ${active ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400"}`}`}>
                     <Icon name={item.icon} />
                   </span>
                   <span>{item.tab}</span>
@@ -428,7 +448,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
   function saveSettings(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    setState((s) => ({ ...s, current_cash: Number(data.get("cash")), settings: { survival_buffer: Number(data.get("buffer")), salary_day: Number(data.get("salary_day")), currency: String(data.get("currency")) } }));
+    setState((s) => ({ ...s, current_cash: Number(data.get("cash")), settings: { survival_buffer: Number(data.get("buffer")), salary_day: Number(data.get("salary_day")), currency: String(data.get("currency")), theme: String(data.get("theme")) as FinanceState["settings"]["theme"] } }));
     close();
   }
 
@@ -494,6 +514,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
           <Field label="Survival buffer"><Input name="buffer" type="number" step="0.01" defaultValue={state.settings.survival_buffer} required /></Field>
           <Field label="Salary day"><Input name="salary_day" type="number" min="1" max="31" defaultValue={state.settings.salary_day} required /></Field>
           <Field label="Currency"><Input name="currency" defaultValue={currency} required /></Field>
+          <Field label="Theme"><Select name="theme" defaultValue={state.settings.theme}><option value="light">Light</option><option value="dark">Dark</option></Select></Field>
           <GhostButton type="button" onClick={resetData}>Reset demo data</GhostButton>
         </Form>
       )}
@@ -511,8 +532,8 @@ function Alert({ text, tone }: { text: string; tone: "red" | "amber" }) {
 
 function Quick({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-3 rounded-[22px] bg-white p-4 text-left text-sm font-black shadow-[0_12px_35px_rgba(15,23,42,0.08)] ring-1 ring-white active:scale-[0.98]">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-950 text-white">
+    <button onClick={onClick} className="flex items-center gap-3 rounded-[22px] bg-white/92 p-4 text-left text-sm font-black shadow-[0_12px_35px_rgba(15,23,42,0.08)] ring-1 ring-white active:scale-[0.98] dark:bg-slate-900/88 dark:ring-white/10">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-950 text-white dark:bg-emerald-500 dark:text-slate-950">
         <Icon name={icon} />
       </span>
       {label}
@@ -521,15 +542,15 @@ function Quick({ icon, label, onClick }: { icon: IconName; label: string; onClic
 }
 
 function Mini({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl bg-slate-50 p-3"><p className="text-xs text-slate-500">{label}</p><p className="font-black">{value}</p></div>;
+  return <div className="rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.07]"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><p className="font-black">{value}</p></div>;
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">{text}</p>;
+  return <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-white/[0.07] dark:text-slate-400">{text}</p>;
 }
 
 function SectionTitle({ title, action, onClick }: { title: string; action: string; onClick: () => void }) {
-  return <div className="flex items-center justify-between"><h2 className="text-xl font-black">{title}</h2><button className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white" onClick={onClick}>{action}</button></div>;
+  return <div className="flex items-center justify-between"><h2 className="text-xl font-black">{title}</h2><button className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] dark:bg-emerald-500 dark:text-slate-950" onClick={onClick}>{action}</button></div>;
 }
 
 function TransactionList({ items, type, currency, onEdit, onDelete }: { items: (Income[] | Expense[])[number][]; type: "income" | "expense"; currency: string; onEdit: (id: string) => void; onDelete: (id: string) => void }) {
@@ -540,8 +561,8 @@ function TransactionList({ items, type, currency, onEdit, onDelete }: { items: (
         const date = "income_date" in item ? item.income_date : item.expense_date;
         const meta = "source" in item ? item.source : item.category;
         return (
-          <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3">
-            <div><p className="text-sm font-bold">{item.title}</p><p className="text-xs text-slate-500">{meta} · {date}</p></div>
+          <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.07]">
+            <div><p className="text-sm font-bold">{item.title}</p><p className="text-xs text-slate-500 dark:text-slate-400">{meta} · {date}</p></div>
             <div className="text-right"><p className={`text-sm font-black ${type === "income" ? "text-emerald-600" : "text-red-600"}`}>{money(item.amount, currency)}</p><RowActions onEdit={() => onEdit(item.id)} onDelete={() => onDelete(item.id)} /></div>
           </div>
         );
@@ -552,7 +573,7 @@ function TransactionList({ items, type, currency, onEdit, onDelete }: { items: (
 
 function ListPayments({ payments, currency, onPaid, onEdit }: { payments: Payment[]; currency: string; onPaid: (p: Payment) => void; onEdit: (id: string) => void }) {
   if (!payments.length) return <Empty text="No upcoming payments." />;
-  return <div className="mt-3 grid gap-2">{payments.map((p) => <PaymentCard key={p.id} payment={p} currency={currency} onPaid={() => onPaid(p)} onEdit={() => onEdit(p.id)} />)}</div>;
+  return <div className="grid gap-2">{payments.map((p) => <PaymentCard key={p.id} payment={p} currency={currency} onPaid={() => onPaid(p)} onEdit={() => onEdit(p.id)} />)}</div>;
 }
 
 function PaymentGroup({ title, payments, currency, onPaid, onEdit, onDelete }: { title: string; payments: Payment[]; currency: string; onPaid: (p: Payment) => void; onEdit: (id: string) => void; onDelete: (id: string) => void }) {
@@ -567,9 +588,9 @@ function PaymentGroup({ title, payments, currency, onPaid, onEdit, onDelete }: {
 
 function PaymentCard({ payment, currency, onPaid, onEdit, onDelete }: { payment: Payment; currency: string; onPaid: () => void; onEdit: () => void; onDelete?: () => void }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-3">
+    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.07]">
       <div className="flex items-center justify-between gap-3">
-        <div><p className="text-sm font-bold">{payment.title}</p><p className="text-xs text-slate-500">Due {payment.due_date} · {payment.status}</p></div>
+        <div><p className="text-sm font-bold">{payment.title}</p><p className="text-xs text-slate-500 dark:text-slate-400">Due {payment.due_date} · {payment.status}</p></div>
         <p className="text-sm font-black">{money(payment.amount, currency)}</p>
       </div>
       <div className="mt-3 flex gap-2">
@@ -586,15 +607,15 @@ function DebtCard({ item, currency, onPay, onEdit, onDelete }: { item: Debt; cur
   return (
     <Card>
       <div className="flex items-start justify-between gap-3">
-        <div><p className="font-black">{item.title}</p><p className="text-xs text-slate-500">{item.debt_type} · {item.priority}</p></div>
-        <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{item.status}</span>
+        <div><p className="font-black">{item.title}</p><p className="text-xs text-slate-500 dark:text-slate-400">{item.debt_type} · {item.priority}</p></div>
+        <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.status === "paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"}`}>{item.status}</span>
       </div>
       <div className="my-4 grid grid-cols-2 gap-3">
         <Mini label="Remaining" value={money(item.remaining_amount, currency)} />
         <Mini label="Monthly" value={money(item.monthly_payment, currency)} />
       </div>
       <ProgressBar value={paid} tone="amber" />
-      <p className="mt-2 text-xs text-slate-500">Due {item.due_date || `day ${item.due_day || "-"}`}</p>
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Due {item.due_date || `day ${item.due_day || "-"}`}</p>
       <div className="mt-4 flex gap-2">
         {item.status !== "paid" && <GhostButton className="flex-1 py-2" onClick={onPay}>Mark paid</GhostButton>}
         <GhostButton className="flex-1 py-2" onClick={onEdit}>Edit</GhostButton>
@@ -607,9 +628,9 @@ function DebtCard({ item, currency, onPay, onEdit, onDelete }: { item: Debt; cur
 function GoalCard({ goal, currency, onEdit, onDelete }: { goal: Goal; currency: string; onEdit: () => void; onDelete: () => void }) {
   const progress = (goal.current_amount / Math.max(1, goal.target_amount)) * 100;
   return (
-    <div className="rounded-2xl bg-slate-50 p-3">
+    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.07]">
       <div className="flex items-center justify-between gap-3">
-        <div><p className="text-sm font-bold">{goal.title}</p><p className="text-xs text-slate-500">{goal.goal_type} · {Math.round(progress)}%</p></div>
+        <div><p className="text-sm font-bold">{goal.title}</p><p className="text-xs text-slate-500 dark:text-slate-400">{goal.goal_type} · {Math.round(progress)}%</p></div>
         <p className="text-sm font-black">{money(goal.current_amount, currency)}</p>
       </div>
       <div className="mt-3"><ProgressBar value={progress} /></div>
@@ -635,6 +656,8 @@ function Icon({ name }: { name: IconName }) {
     income: "M12 19V5M6 11l6-6 6 6",
     expense: "M12 5v14M6 13l6 6 6-6",
     settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM4 12h2M18 12h2M12 4v2M12 18v2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4",
+    sun: "M12 4V2M12 22v-2M4 12H2M22 12h-2M5 5 3.6 3.6M20.4 20.4 19 19M19 5l1.4-1.4M3.6 20.4 5 19M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8",
+    moon: "M21 14.5A7.5 7.5 0 0 1 9.5 3a8.5 8.5 0 1 0 11.5 11.5",
   };
 
   return (
