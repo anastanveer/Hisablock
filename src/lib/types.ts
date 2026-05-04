@@ -67,6 +67,8 @@ export interface Payment {
   status: PaymentStatus;
   category?: string;
   priority?: Priority;
+  balance_before?: number;
+  balance_after?: number;
   is_recurring?: boolean;
   recurring_day?: number;
   reminder_day?: number;

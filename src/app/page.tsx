@@ -35,6 +35,7 @@ const navItems: { tab: Tab; icon: IconName }[] = [
 ];
 
 const demoIds = new Set([
+  "account-main",
   "account-bank",
   "account-other",
   "asset-binance",
@@ -71,16 +72,18 @@ const stateSignature = (value: FinanceState) => JSON.stringify(value);
 
 const normalizeState = (value?: Partial<FinanceState> | null): FinanceState => {
   if (!value || typeof value !== "object") return seedState;
+  const addRealDefaults = (value.settings?.profile_version || 0) < seedState.settings.profile_version;
   return {
     ...seedState,
     ...value,
+    current_cash: addRealDefaults && !value.current_cash ? seedState.current_cash : value.current_cash ?? seedState.current_cash,
     cash_accounts: mergeById(seedState.cash_accounts, removeDemo(value.cash_accounts)),
-    assets: removeDemo(value.assets),
-    incomes: removeDemo(value.incomes),
+    assets: addRealDefaults ? mergeById(seedState.assets, removeDemo(value.assets)) : removeDemo(value.assets),
+    incomes: addRealDefaults ? mergeById(seedState.incomes, removeDemo(value.incomes)) : removeDemo(value.incomes),
     expenses: removeDemo(value.expenses),
-    debts: removeDemo(value.debts),
-    payments: removeDemo(value.payments),
-    goals: removeDemo(value.goals),
+    debts: addRealDefaults ? mergeById(seedState.debts, removeDemo(value.debts)) : removeDemo(value.debts),
+    payments: addRealDefaults ? mergeById(seedState.payments, removeDemo(value.payments)) : removeDemo(value.payments),
+    goals: addRealDefaults ? mergeById(seedState.goals, removeDemo(value.goals)) : removeDemo(value.goals),
     settings: {
       ...seedState.settings,
       ...value.settings,
@@ -358,24 +361,43 @@ export default function Home() {
 
   function markPaymentPaid(payment: Payment) {
     if (payment.status === "paid") return;
-    setState((s) => ({
-      ...applyCashDelta(s, -payment.amount),
-      payments: s.payments.map((p) => (p.id === payment.id ? { ...p, status: "paid", paid_date: todayISO() } : p)),
-      debts: s.debts.map((d) => {
-        if (d.id !== payment.debt_id) return d;
-        const remaining = Math.max(0, d.remaining_amount - payment.amount);
-        return { ...d, remaining_amount: remaining, status: remaining === 0 ? "paid" : "active" };
-      }),
-    }));
+    setState((s) => {
+      const linkedDebt = s.debts.find((d) => d.id === payment.debt_id);
+      const before = linkedDebt?.remaining_amount;
+      const after = before === undefined ? undefined : Math.max(0, before - payment.amount);
+      return {
+        ...applyCashDelta(s, -payment.amount),
+        payments: s.payments.map((p) =>
+          p.id === payment.id ? { ...p, status: "paid", paid_date: todayISO(), balance_before: before, balance_after: after } : p,
+        ),
+        debts: s.debts.map((d) => (d.id === payment.debt_id && after !== undefined ? { ...d, remaining_amount: after, status: after === 0 ? "paid" : "active" } : d)),
+      };
+    });
   }
 
   function payDebtInstallment(debtItem: Debt) {
     const amount = debtItem.monthly_payment || debtItem.remaining_amount;
+    const before = debtItem.remaining_amount;
     const remaining = Math.max(0, debtItem.remaining_amount - amount);
     setState((s) => ({
       ...applyCashDelta(s, -amount),
       debts: s.debts.map((d) => (d.id === debtItem.id ? { ...d, remaining_amount: remaining, status: remaining === 0 ? "paid" : "active" } : d)),
-      payments: [{ id: uid(), debt_id: debtItem.id, title: debtItem.title, amount, due_date: todayISO(), paid_date: todayISO(), status: "paid" }, ...s.payments],
+      payments: [
+        {
+          id: uid(),
+          debt_id: debtItem.id,
+          title: debtItem.title,
+          amount,
+          due_date: todayISO(),
+          paid_date: todayISO(),
+          status: "paid",
+          category: "Debt Payment",
+          priority: debtItem.priority,
+          balance_before: before,
+          balance_after: remaining,
+        },
+        ...s.payments,
+      ],
     }));
   }
 
@@ -457,6 +479,14 @@ export default function Home() {
 
               {safe >= 100 && upcoming15Total + rentAmount > availableCash && <Alert text="Upcoming payments are greater than your available cash." tone="red" />}
 
+              <Card className="border-red-100 bg-white p-5 dark:border-red-500/15 dark:bg-red-500/10">
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Total Pending Debt</p>
+                <p className="mt-2 text-4xl font-black tracking-tight text-red-600 dark:text-red-300">{money(debt, currency)}</p>
+                <div className="mt-4">
+                  <Mini label="Debt Reduced This Month" value={money(debtPaidThisMonth(state), currency)} />
+                </div>
+              </Card>
+
               <div className="grid min-w-0 grid-cols-2 gap-3">
                 <StatCard label="Upcoming 7 days" value={money(upcoming7Total, currency)} tone="amber" />
                 <StatCard label="Upcoming 15 days" value={money(upcoming15Total, currency)} tone="amber" />
@@ -501,6 +531,10 @@ export default function Home() {
                 <h2 className="mb-2 text-base font-bold">This Month</h2>
                 <p className={`text-2xl font-black ${income - expenses >= 0 ? "text-emerald-600" : "text-red-600"}`}>{money(income - expenses, currency)}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{income - expenses >= 0 ? "Saving this month" : "Loss this month"}</p>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <Mini label="Debt Paid" value={money(debtPaidThisMonth(state), currency)} />
+                  <Mini label="Debt Remaining" value={money(debt, currency)} />
+                </div>
               </Card>
 
               <Card className="!bg-white !text-slate-950 dark:!bg-slate-900 dark:!text-white">
@@ -705,12 +739,26 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
       status: String(data.get("status")) as Payment["status"],
       category: String(data.get("category") || ""),
       priority: String(data.get("priority") || "medium") as Payment["priority"],
+      balance_before: payment?.balance_before,
+      balance_after: payment?.balance_after,
       is_recurring: data.get("recurring") === "on",
       recurring_day: Number(data.get("recurring_day") || 0) || undefined,
       reminder_day: Number(data.get("reminder_day") || 0) || undefined,
       notes: String(data.get("notes") || ""),
     };
-    setState((s) => ({ ...s, payments: payment ? s.payments.map((i) => (i.id === next.id ? next : i)) : [next, ...s.payments] }));
+    setState((s) => {
+      if (!payment && next.status === "paid" && next.debt_id) {
+        const linkedDebt = s.debts.find((d) => d.id === next.debt_id);
+        const before = linkedDebt?.remaining_amount;
+        const after = before === undefined ? undefined : Math.max(0, before - next.amount);
+        return {
+          ...applyCashDelta(s, -next.amount),
+          payments: [{ ...next, paid_date: todayISO(), balance_before: before, balance_after: after }, ...s.payments],
+          debts: s.debts.map((d) => (d.id === next.debt_id && after !== undefined ? { ...d, remaining_amount: after, status: after === 0 ? "paid" : "active" } : d)),
+        };
+      }
+      return { ...s, payments: payment ? s.payments.map((i) => (i.id === next.id ? next : i)) : [next, ...s.payments] };
+    });
     close();
   }
 
@@ -844,7 +892,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
               <input className="hidden" type="file" accept="application/json" onChange={importBackup} />
             </label>
           </div>
-          <GhostButton type="button" onClick={resetData}>Reset demo data</GhostButton>
+          <GhostButton type="button" onClick={resetData}>Reset to real starting data</GhostButton>
         </Form>
       )}
     </Sheet>
@@ -981,6 +1029,12 @@ function PaymentCard({ payment, currency, onPaid, onEdit, onDelete }: { payment:
         <p className={`text-sm font-black ${critical ? "text-red-600 dark:text-red-300" : "text-slate-950 dark:text-white"}`}>{money(payment.amount, currency)}</p>
       </div>
       {critical && <p className="mt-2 rounded-xl bg-red-100 px-3 py-2 text-xs font-black text-red-700 dark:bg-red-500/15 dark:text-red-300">Rent must be paid first</p>}
+      {payment.status === "paid" && payment.balance_before !== undefined && payment.balance_after !== undefined && (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <Mini label="Before" value={money(payment.balance_before, currency)} />
+          <Mini label="After" value={money(payment.balance_after, currency)} />
+        </div>
+      )}
       <div className="mt-3 flex gap-2">
         {payment.status !== "paid" && <GhostButton className="flex-1 py-2" onClick={onPaid}>Paid</GhostButton>}
         <GhostButton className="flex-1 py-2" onClick={onEdit}>Edit</GhostButton>

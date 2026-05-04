@@ -61,7 +61,7 @@ export const safeToSpend = (state: FinanceState) =>
   );
 
 export const debtPaidThisMonth = (state: FinanceState) =>
-  sum(state.payments.filter((p) => p.status === "paid" && p.paid_date && isSameMonth(p.paid_date)), (p) => p.amount);
+  sum(state.payments.filter((p) => p.debt_id && p.status === "paid" && p.paid_date && isSameMonth(p.paid_date)), (p) => p.amount);
 
 export const shoppingGiftTotal = (expenses: Expense[]) =>
   sum(expenses.filter((e) => isSameMonth(e.expense_date) && ["Shopping", "Wife/Gifts"].includes(e.category)), (e) => e.amount);
