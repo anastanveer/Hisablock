@@ -1,0 +1,46 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="0.48" stop-color="#123B3A"/>
+      <stop offset="1" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#020617" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="520" rx="42" fill="url(#bg)"/>
+  <circle cx="1010" cy="90" r="150" fill="#34D399" opacity="0.16">
+    <animate attributeName="r" values="130;170;130" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="170" cy="425" r="160" fill="#60A5FA" opacity="0.13">
+    <animate attributeName="cy" values="425;385;425" dur="6s" repeatCount="indefinite"/>
+  </circle>
+  <g filter="url(#shadow)">
+    <rect x="706" y="58" width="300" height="404" rx="38" fill="#F8FAFC"/>
+    <rect x="730" y="90" width="252" height="94" rx="26" fill="#0F172A"/>
+    <text x="754" y="123" fill="#A7F3D0" font-family="Arial, sans-serif" font-size="15" font-weight="700">Safe to Spend</text>
+    <text x="754" y="158" fill="white" font-family="Arial, sans-serif" font-size="30" font-weight="900">AED 1,401.06</text>
+    <rect x="730" y="206" width="116" height="74" rx="20" fill="#ECFDF5"/>
+    <rect x="866" y="206" width="116" height="74" rx="20" fill="#FEF3C7"/>
+    <rect x="730" y="302" width="252" height="46" rx="18" fill="#F1F5F9"/>
+    <rect x="730" y="366" width="252" height="46" rx="18" fill="#F1F5F9"/>
+    <rect x="748" y="320" width="150" height="10" rx="5" fill="#10B981">
+      <animate attributeName="width" values="80;190;150" dur="4s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="748" y="384" width="108" height="10" rx="5" fill="#F59E0B">
+      <animate attributeName="width" values="60;160;108" dur="4.5s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <text x="92" y="150" fill="#A7F3D0" font-family="Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="4">HISAB PRO</text>
+  <text x="90" y="220" fill="white" font-family="Arial, sans-serif" font-size="66" font-weight="900">Money Control</text>
+  <text x="94" y="268" fill="#D1FAE5" font-family="Arial, sans-serif" font-size="28" font-weight="600">Mobile-first finance control app</text>
+  <rect x="94" y="322" width="170" height="50" rx="25" fill="#10B981">
+    <animate attributeName="opacity" values="0.75;1;0.75" dur="2.8s" repeatCount="indefinite"/>
+  </rect>
+  <text x="124" y="354" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="800">Track Cash</text>
+  <rect x="282" y="322" width="174" height="50" rx="25" fill="white" opacity="0.14"/>
+  <text x="314" y="354" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="800">Pay Debts</text>
+  <rect x="474" y="322" width="206" height="50" rx="25" fill="white" opacity="0.14"/>
+  <text x="504" y="354" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="800">Save Monthly</text>
+</svg>
