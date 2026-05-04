@@ -1,5 +1,23 @@
 create extension if not exists "pgcrypto";
 
+create table if not exists app_state (
+  id text primary key default 'default',
+  state jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+insert into app_state (id, state)
+values ('default', '{"current_cash":0,"cash_accounts":[{"id":"account-main","title":"Main cash balance","amount":0,"include_in_safe":true}],"assets":[],"incomes":[],"expenses":[],"debts":[],"payments":[],"goals":[],"settings":{"survival_buffer":0,"salary_day":1,"currency":"AED","theme":"light","profile_version":4}}'::jsonb)
+on conflict (id) do nothing;
+
+do $$
+begin
+  alter publication supabase_realtime add table app_state;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;
+
 create table if not exists profiles (
   id uuid primary key default gen_random_uuid(),
   name text,
@@ -113,3 +131,6 @@ create trigger goals_updated_at before update on goals for each row execute func
 
 drop trigger if exists settings_updated_at on settings;
 create trigger settings_updated_at before update on settings for each row execute function set_updated_at();
+
+drop trigger if exists app_state_updated_at on app_state;
+create trigger app_state_updated_at before update on app_state for each row execute function set_updated_at();

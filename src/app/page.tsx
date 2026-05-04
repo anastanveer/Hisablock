@@ -4,6 +4,7 @@ import type { ChangeEvent, Dispatch, FormEvent, ReactNode, SetStateAction } from
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Field, GhostButton, Input, ProgressBar, Select, Sheet, StatCard, Textarea } from "@/components/ui";
 import { categoryTotals, daysFromNow, debtPaidThisMonth, dueTomorrow, financialScore, freeCashAfterRent, money, monthlyExpenses, monthlyIncome, overdue, rentDue, safeCash, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
+import { loadRemoteState, remoteEnabled, saveRemoteState, supabase } from "@/lib/remote-state";
 import { seedState } from "@/lib/seed";
 import type { Debt, Expense, FinanceState, Goal, Income, Payment } from "@/lib/types";
 
@@ -33,6 +34,33 @@ const navItems: { tab: Tab; icon: IconName }[] = [
   { tab: "Summary", icon: "chart" },
 ];
 
+const demoIds = new Set([
+  "account-bank",
+  "account-other",
+  "asset-binance",
+  "income-salary",
+  "debt-sukuk",
+  "debt-noon",
+  "debt-mastercard",
+  "debt-aafaq",
+  "debt-tabby-statement",
+  "debt-tabby-later",
+  "debt-office",
+  "pay-rent-may",
+  "pay-mastercard-may",
+  "pay-noon-may",
+  "pay-office-may",
+  "pay-sukuk-may",
+  "pay-tabby-statement",
+  "pay-tabby-2-june",
+  "pay-tabby-8-june",
+  "pay-tabby-23-june",
+  "goal-emergency",
+  "goal-tabby",
+]);
+
+const removeDemo = <T extends { id: string }>(items?: T[]) => (items || []).filter((item) => !demoIds.has(item.id));
+
 const mergeById = <T extends { id: string }>(base: T[], saved?: T[]) => {
   const items = new Map(base.map((item) => [item.id, item]));
   saved?.forEach((item) => items.set(item.id, { ...items.get(item.id), ...item }));
@@ -43,13 +71,13 @@ const normalizeState = (value: FinanceState): FinanceState => {
   return {
     ...seedState,
     ...value,
-    cash_accounts: mergeById(seedState.cash_accounts, value.cash_accounts),
-    assets: mergeById(seedState.assets, value.assets),
-    incomes: mergeById(seedState.incomes, value.incomes),
+    cash_accounts: mergeById(seedState.cash_accounts, removeDemo(value.cash_accounts)),
+    assets: removeDemo(value.assets),
+    incomes: removeDemo(value.incomes),
     expenses: value.expenses || [],
-    debts: mergeById(seedState.debts, value.debts),
-    payments: mergeById(seedState.payments, value.payments),
-    goals: mergeById(seedState.goals, value.goals),
+    debts: removeDemo(value.debts),
+    payments: removeDemo(value.payments),
+    goals: removeDemo(value.goals),
     settings: {
       ...seedState.settings,
       ...value.settings,
@@ -144,19 +172,21 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>("Home");
   const [sheet, setSheet] = useState<{ kind: SheetKind; id?: string } | null>(null);
   const [expenseFilter, setExpenseFilter] = useState("This month");
+  const [remoteReady, setRemoteReady] = useState(false);
 
   useEffect(() => {
     let active = true;
     async function load() {
       let next = seedState;
       try {
-        next = loadFromLocalStorage() || (await loadFromIndexedDb()) || seedState;
+        next = (await loadRemoteState()) || loadFromLocalStorage() || (await loadFromIndexedDb()) || seedState;
       } catch {
         next = (await loadFromIndexedDb()) || seedState;
       }
       if (!active) return;
       setState(next);
       saveFinanceState(next);
+      setRemoteReady(true);
       if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, DEFAULT_PIN);
       setHasPin(Boolean(localStorage.getItem(PIN_KEY)));
       setAuthed(Number(localStorage.getItem(AUTH_KEY) || 0) > Date.now());
@@ -179,6 +209,25 @@ export default function Home() {
   useEffect(() => {
     if (hydrated) saveFinanceState(state);
   }, [hydrated, state]);
+
+  useEffect(() => {
+    if (hydrated && remoteReady) void saveRemoteState(state);
+  }, [hydrated, remoteReady, state]);
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+    const channel = client
+      .channel("app-state-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_state", filter: "id=eq.default" }, (payload) => {
+        const remote = payload.new && "state" in payload.new ? (payload.new.state as FinanceState) : null;
+        if (remote) setState(normalizeState(remote));
+      })
+      .subscribe();
+    return () => {
+      void client.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     if (hydrated && authed) notifyDuePayments(state.payments, state.settings.currency);
@@ -507,7 +556,7 @@ export default function Home() {
                   <Button type="button" onClick={exportMonthlyPdf}>Export monthly PDF</Button>
                   <GhostButton type="button" onClick={enableNotifications}>Enable payment reminders</GhostButton>
                 </div>
-                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">iPhone reminders work when app notifications are allowed and the app is opened.</p>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{remoteEnabled ? "Cloud sync is active across browsers." : "Cloud sync needs Supabase env keys. Local backup is active."}</p>
               </Card>
               <Card>
                 <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Financial Score</p>
