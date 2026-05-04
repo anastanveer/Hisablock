@@ -813,7 +813,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
           <Field label="Monthly payment"><Input name="monthly" type="number" step="0.01" defaultValue={debt?.monthly_payment || 0} required /></Field>
           <Field label="Due date"><Input name="due_date" type="date" defaultValue={debt?.due_date} /></Field>
           <Field label="Due day"><Input name="due_day" type="number" min="1" max="31" defaultValue={debt?.due_day} /></Field>
-          <Field label="Priority"><Select name="priority" defaultValue={debt?.priority || "medium"}><option>critical</option><option>high</option><option>medium</option><option>low</option></Select></Field>
+          <Field label="Priority"><Select name="priority" defaultValue={debt?.priority || "medium"}><option>critical</option><option>high</option><option>medium_high</option><option>medium</option><option>low</option></Select></Field>
           <Field label="Type"><Select name="type" defaultValue={debt?.debt_type}>{debtTypes.map((x) => <option key={x}>{x}</option>)}</Select></Field>
           <Field label="Status"><Select name="status" defaultValue={debt?.status || "active"}><option>active</option><option>paid</option></Select></Field>
           <Field label="Notes"><Textarea name="notes" defaultValue={debt?.notes} /></Field>
@@ -826,7 +826,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
           <Field label="Due date"><Input name="due_date" type="date" defaultValue={payment?.due_date || todayISO()} required /></Field>
           <Field label="Linked debt"><Select name="debt_id" defaultValue={payment?.debt_id || ""}><option value="">None</option>{state.debts.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}</Select></Field>
           <Field label="Category"><Select name="category" defaultValue={payment?.category || "Other"}>{expenseCategories.map((x) => <option key={x}>{x}</option>)}</Select></Field>
-          <Field label="Priority"><Select name="priority" defaultValue={payment?.priority || "medium"}><option>critical</option><option>high</option><option>medium</option><option>low</option></Select></Field>
+          <Field label="Priority"><Select name="priority" defaultValue={payment?.priority || "medium"}><option>critical</option><option>high</option><option>medium_high</option><option>medium</option><option>low</option></Select></Field>
           <Field label="Status"><Select name="status" defaultValue={payment?.status || "unpaid"}><option>unpaid</option><option>paid</option><option>overdue</option></Select></Field>
           <div className="grid min-w-0 grid-cols-2 gap-3">
             <Field label="Recurring day"><Input name="recurring_day" type="number" min="1" max="31" defaultValue={payment?.recurring_day} /></Field>

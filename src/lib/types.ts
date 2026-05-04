@@ -1,4 +1,4 @@
-export type Priority = "critical" | "high" | "medium" | "low";
+export type Priority = "critical" | "high" | "medium_high" | "medium" | "low";
 export type DebtStatus = "active" | "paid";
 export type PaymentStatus = "unpaid" | "paid" | "overdue";
 
