@@ -1,16 +1,19 @@
 "use client";
 
 /* eslint-disable react-hooks/set-state-in-effect */
-import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
+import type { ChangeEvent, Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Field, GhostButton, Input, ProgressBar, Select, Sheet, StatCard, Textarea } from "@/components/ui";
-import { categoryTotals, debtPaidThisMonth, dueTomorrow, financialScore, freeCashAfterRent, money, monthlyExpenses, monthlyIncome, overdue, rentDue, safeCash, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
+import { categoryTotals, daysFromNow, debtPaidThisMonth, dueTomorrow, financialScore, freeCashAfterRent, money, monthlyExpenses, monthlyIncome, overdue, rentDue, safeCash, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
 import { seedState } from "@/lib/seed";
 import type { Debt, Expense, FinanceState, Goal, Income, Payment } from "@/lib/types";
 
 const DATA_KEY = "hisab-pro-state-v1";
 const PIN_KEY = "hisab-pro-pin";
+const AUTH_KEY = "hisab-pro-unlocked-until";
+const LAST_NOTIFY_KEY = "hisab-pro-last-notify";
 const DEFAULT_PIN = "1122";
+const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 const incomeSources = ["Salary", "Fiverr", "Upwork", "Client payment", "Refund", "Other"];
 const expenseCategories = ["Rent", "Food", "Transport", "Mobile", "Family Support", "Shopping", "Wife/Gifts", "Debt Payment", "Office Deduction", "Emergency", "Other"];
 const debtTypes = ["Credit Card", "Finance Loan", "Tabby / Installment", "Installment", "Office Loan", "family", "other"];
@@ -28,18 +31,47 @@ const navItems: { tab: Tab; icon: IconName }[] = [
   { tab: "Summary", icon: "chart" },
 ];
 
+const mergeById = <T extends { id: string }>(base: T[], saved?: T[]) => {
+  const items = new Map(base.map((item) => [item.id, item]));
+  saved?.forEach((item) => items.set(item.id, { ...items.get(item.id), ...item }));
+  return [...items.values()];
+};
+
 const normalizeState = (value: FinanceState): FinanceState => {
-  if (!value.settings?.profile_version || value.settings.profile_version < seedState.settings.profile_version) return seedState;
   return {
     ...seedState,
     ...value,
-    cash_accounts: value.cash_accounts?.length ? value.cash_accounts : seedState.cash_accounts,
-    assets: value.assets?.length ? value.assets : seedState.assets,
+    cash_accounts: mergeById(seedState.cash_accounts, value.cash_accounts),
+    assets: mergeById(seedState.assets, value.assets),
+    incomes: mergeById(seedState.incomes, value.incomes),
+    expenses: value.expenses || [],
+    debts: mergeById(seedState.debts, value.debts),
+    payments: mergeById(seedState.payments, value.payments),
+    goals: mergeById(seedState.goals, value.goals),
     settings: {
       ...seedState.settings,
       ...value.settings,
+      profile_version: seedState.settings.profile_version,
     },
   };
+};
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char] || char);
+
+const notifyDuePayments = (payments: Payment[], currency: string, force = false) => {
+  if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
+  const due = payments.filter((payment) => payment.status !== "paid" && daysFromNow(payment.due_date) >= 0 && daysFromNow(payment.due_date) <= 1);
+  if (!due.length) return;
+  const key = `${todayISO()}:${due.map((payment) => payment.id).join(",")}`;
+  if (!force && localStorage.getItem(LAST_NOTIFY_KEY) === key) return;
+  localStorage.setItem(LAST_NOTIFY_KEY, key);
+  const first = due[0];
+  const label = daysFromNow(first.due_date) === 0 ? "today" : "tomorrow";
+  new Notification("HisabLock Payment Reminder", {
+    body: `${first.title}: ${money(first.amount, currency)} due ${label}${due.length > 1 ? ` +${due.length - 1} more` : ""}`,
+    tag: "hisablock-payment-reminder",
+  });
 };
 
 const applyCashDelta = (state: FinanceState, delta: number): FinanceState => ({
@@ -72,6 +104,7 @@ export default function Home() {
     }
     if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, DEFAULT_PIN);
     setHasPin(Boolean(localStorage.getItem(PIN_KEY)));
+    setAuthed(Number(localStorage.getItem(AUTH_KEY) || 0) > Date.now());
     if ("serviceWorker" in navigator) {
       if (process.env.NODE_ENV === "production") {
         navigator.serviceWorker.register("/sw.js").catch(() => undefined);
@@ -86,6 +119,10 @@ export default function Home() {
   useEffect(() => {
     if (hydrated) localStorage.setItem(DATA_KEY, JSON.stringify(state));
   }, [hydrated, state]);
+
+  useEffect(() => {
+    if (hydrated && authed) notifyDuePayments(state.payments, state.settings.currency);
+  }, [authed, hydrated, state.payments, state.settings.currency]);
 
   const currency = state.settings.currency;
   const isDark = state.settings.theme === "dark";
@@ -122,10 +159,52 @@ export default function Home() {
     const saved = localStorage.getItem(PIN_KEY);
     if (!saved && pin.length >= 4) {
       localStorage.setItem(PIN_KEY, pin);
+      localStorage.setItem(AUTH_KEY, String(Date.now() + SESSION_MS));
       setHasPin(true);
       setAuthed(true);
     }
-    if (saved === pin) setAuthed(true);
+    if (saved === pin) {
+      localStorage.setItem(AUTH_KEY, String(Date.now() + SESSION_MS));
+      setAuthed(true);
+    }
+  }
+
+  async function enableNotifications() {
+    if (!("Notification" in window)) {
+      alert("Notifications are not supported on this device/browser.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") notifyDuePayments(state.payments, currency, true);
+  }
+
+  function exportMonthlyPdf() {
+    const month = new Date().toLocaleString("en-AE", { month: "long", year: "numeric" });
+    const categories = categoryTotals(state.expenses).slice(0, 5);
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`<!doctype html><html><head><title>HisabLock ${escapeHtml(month)}</title><style>
+      body{font-family:Arial,sans-serif;margin:0;padding:28px;color:#0f172a;background:#f8fafc}
+      .page{max-width:760px;margin:auto;background:white;border-radius:22px;padding:28px;box-shadow:0 18px 60px #dbe3ee}
+      h1{margin:0;font-size:30px}.muted{color:#64748b}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:20px 0}
+      .box{border:1px solid #e2e8f0;border-radius:16px;padding:14px}.label{font-size:12px;color:#64748b;font-weight:700}.value{font-size:22px;font-weight:900;margin-top:5px}
+      table{width:100%;border-collapse:collapse;margin-top:14px}td,th{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;font-size:13px}th{color:#64748b}
+      .red{color:#ef4444}.green{color:#10b981}.amber{color:#b45309}@media print{body{background:white;padding:0}.page{box-shadow:none;border-radius:0}}
+    </style></head><body><div class="page">
+      <p class="muted">HisabLock Monthly Record</p><h1>${escapeHtml(month)}</h1>
+      <div class="grid">
+        <div class="box"><div class="label">Current Cash</div><div class="value">${money(availableCash, currency)}</div></div>
+        <div class="box"><div class="label">Reserved Rent</div><div class="value amber">${money(rentAmount, currency)}</div></div>
+        <div class="box"><div class="label">Safe To Spend</div><div class="value red">${money(safe, currency)}</div></div>
+        <div class="box"><div class="label">Total Debt</div><div class="value red">${money(debt, currency)}</div></div>
+        <div class="box"><div class="label">Income</div><div class="value green">${money(income, currency)}</div></div>
+        <div class="box"><div class="label">Expenses</div><div class="value red">${money(expenses, currency)}</div></div>
+      </div>
+      <h2>Payments</h2><table><tr><th>Title</th><th>Due</th><th>Status</th><th>Amount</th></tr>${state.payments.map((p) => `<tr><td>${escapeHtml(p.title)}</td><td>${p.due_date}</td><td>${p.status}</td><td>${money(p.amount, currency)}</td></tr>`).join("")}</table>
+      <h2>Debts</h2><table><tr><th>Name</th><th>Type</th><th>Priority</th><th>Remaining</th></tr>${state.debts.map((d) => `<tr><td>${escapeHtml(d.title)}</td><td>${escapeHtml(d.debt_type)}</td><td>${d.priority}</td><td>${money(d.remaining_amount, currency)}</td></tr>`).join("")}</table>
+      <h2>Top Categories</h2><table><tr><th>Category</th><th>Total</th></tr>${categories.map(([name, value]) => `<tr><td>${escapeHtml(name)}</td><td>${money(value, currency)}</td></tr>`).join("") || "<tr><td>No expenses</td><td>AED 0.00</td></tr>"}</table>
+    </div><script>window.print()</script></body></html>`);
+    win.document.close();
   }
 
   function resetData() {
@@ -363,6 +442,14 @@ export default function Home() {
           {tab === "Summary" && (
             <>
               <Card>
+                <h2 className="mb-3 text-base font-bold">Monthly Records</h2>
+                <div className="grid gap-3">
+                  <Button type="button" onClick={exportMonthlyPdf}>Export monthly PDF</Button>
+                  <GhostButton type="button" onClick={enableNotifications}>Enable payment reminders</GhostButton>
+                </div>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">iPhone reminders work when app notifications are allowed and the app is opened.</p>
+              </Card>
+              <Card>
                 <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Financial Score</p>
                 <p className="mt-1 text-5xl font-black">{score}</p>
                 <p className="mt-1 text-sm font-bold text-emerald-600">{scoreLabel(score)}</p>
@@ -535,6 +622,27 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
     close();
   }
 
+  function exportBackup() {
+    const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), state }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `hisablock-backup-${todayISO()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importBackup(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const parsed = JSON.parse(await file.text());
+    const restored = normalizeState(parsed.state || parsed);
+    localStorage.setItem(DATA_KEY, JSON.stringify(restored));
+    setState(restored);
+    e.target.value = "";
+    alert("Backup restored.");
+  }
+
   return (
     <Sheet title={sheet.kind === "settings" ? "Settings" : `${sheet.id ? "Edit" : "Add"} ${sheet.kind}`} onClose={close}>
       {sheet.kind === "income" && (
@@ -605,6 +713,14 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
           <Field label="Salary day"><Input name="salary_day" type="number" min="1" max="31" defaultValue={state.settings.salary_day} required /></Field>
           <Field label="Currency"><Input name="currency" defaultValue={currency} required /></Field>
           <Field label="Theme"><Select name="theme" defaultValue={state.settings.theme}><option value="light">Light</option><option value="dark">Dark</option></Select></Field>
+          <div className="grid gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.07]">
+            <p className="text-sm font-black">Data safety</p>
+            <GhostButton type="button" onClick={exportBackup}>Download backup</GhostButton>
+            <label className="grid h-12 cursor-pointer place-items-center rounded-2xl bg-white px-4 text-sm font-black text-slate-950 shadow-[0_10px_24px_rgba(15,23,42,0.08)] ring-1 ring-slate-200 dark:bg-slate-950 dark:text-white dark:ring-white/10">
+              Restore backup
+              <input className="hidden" type="file" accept="application/json" onChange={importBackup} />
+            </label>
+          </div>
           <GhostButton type="button" onClick={resetData}>Reset demo data</GhostButton>
         </Form>
       )}
