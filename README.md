@@ -1,105 +1,54 @@
-# Money Control / Hisab Pro
+<p align="center">
+  <img src="./public/readme-banner.svg" alt="Money Control / Hisab Pro animated banner" width="100%" />
+</p>
 
-Premium mobile-first personal finance control app for salary, expenses, debts, credit cards, installments, upcoming payments, and monthly savings.
+<h1 align="center">Money Control / Hisab Pro</h1>
 
-Built for daily personal use with a simple banking-app feel.
+<p align="center">
+  Premium mobile-first personal finance control PWA for salary, expenses, debts, credit cards, installments, payments, and savings.
+</p>
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![PWA](https://img.shields.io/badge/PWA-Ready-10B981?style=for-the-badge)
-![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js" />
+  <img src="https://img.shields.io/badge/TypeScript-Ready-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind-CSS-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white" />
+  <img src="https://img.shields.io/badge/PWA-Ready-10B981?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" />
+</p>
 
-## Preview
+---
 
-Mobile banking style interface with:
+## App Feel
 
-- PIN login
-- Safe-to-spend dashboard
-- Income and expense tracking
-- Debt and credit card tracker
-- Upcoming payment calendar
-- Monthly score and summary
-- Savings/debt goals
-- PWA install support
+Hisab Pro is designed like a simple mobile banking app, not a normal website.
 
-## Core Idea
+| Dashboard | Money Tracking | Debt Control |
+|---|---|---|
+| Safe-to-spend card | Income and expenses | Credit cards, loans, Tabby |
+| Cash visibility | Category filters | Payment progress |
+| Monthly result | Shopping warnings | Upcoming dues |
 
-Most finance apps are too complex for daily use. Hisab Pro focuses on one question:
-
-> After my bills, debts, installments, and buffer, how much is actually safe to spend?
-
-Formula:
+## Main Formula
 
 ```txt
 Safe to Spend = Current Cash - Upcoming 15 Days Payments - Survival Buffer
 ```
 
-If safe-to-spend is negative, the app warns the user immediately.
+If safe-to-spend is below zero, the app shows a direct spending warning.
 
 ## Features
 
-### Dashboard
-
-- Current cash balance
-- Monthly income
-- Monthly expenses
-- Total remaining debt
-- Upcoming payments in 7 and 15 days
-- Safe-to-spend card
-- Debt progress
-- Monthly saving/loss status
-
-### Income
-
-- Add, edit, delete income
-- Salary, Fiverr, Upwork, client payment, refund, other
-- Recurring income option
-- Notes support
-
-### Expenses
-
-- Add, edit, delete expenses
-- Category filters
-- Today, week, month filters
-- Warning for non-essential shopping and gifts
-- Payment method support
-
-### Debts
-
-- Credit cards
-- Loans
-- Tabby/installments
-- Office/family debts
-- Monthly payment tracking
-- Remaining balance progress
-- Mark payment as paid
-
-### Payment Calendar
-
-- Due today
-- This week
-- This month
-- Overdue
-- Mark paid
-- Link payment to debt
-
-### Monthly Summary
-
-- Total income
-- Total expenses
-- Debt paid
-- Savings/loss
-- Shopping/gifts total
-- Top spending categories
-- Financial score out of 100
-
-### Goals
-
-- Emergency fund
-- Debt clearance
-- Savings goals
-- Deadline and progress tracking
+| Module | Included |
+|---|---|
+| Auth | Simple personal PIN login |
+| Dashboard | Cash, income, expenses, debt, safe-to-spend |
+| Income | Add, edit, delete, recurring option |
+| Expenses | Categories, filters, payment method, notes |
+| Debts | Remaining amount, monthly payment, due date, progress |
+| Calendar | Today, week, month, overdue payments |
+| Summary | Savings/loss, top categories, score out of 100 |
+| Goals | Saving, debt, emergency goals |
+| PWA | Installable on mobile home screen |
 
 ## Tech Stack
 
@@ -120,7 +69,7 @@ Vercel-ready deployment
 src/
   app/
     page.tsx          Main app UI and flows
-    layout.tsx        Metadata, PWA config
+    layout.tsx        Metadata and PWA config
     globals.css       Global theme
   components/
     ui.tsx            Reusable UI components
@@ -129,6 +78,7 @@ src/
     seed.ts           Demo data
     types.ts          TypeScript models
 public/
+  readme-banner.svg   Animated README hero
   manifest.webmanifest
   sw.js
   icon.svg
@@ -138,29 +88,21 @@ supabase/
 
 ## Demo Data
 
-Included by default:
+| Item | Amount |
+|---|---:|
+| Salary | AED 8,000 |
+| Current Cash | AED 4,247.56 |
+| Sukuk Finance | AED 40,266.67 |
+| ENBD Noon Card | AED 3,714.05 |
+| Mastercard Titanium | AED 6,914.84 |
+| Tabby Statement | AED 1,604.54 |
+| Tabby Pay Later | AED 892.17 |
+| Office Balance | AED 4,000 |
 
-- Salary: AED 8,000
-- Current cash: AED 4,247.56
-- Sukuk Finance
-- ENBD Noon Card
-- Mastercard Titanium
-- Tabby Statement
-- Tabby Pay Later
-- Office Balance
-- Upcoming payments for May/June
-
-## Getting Started
-
-Install dependencies:
+## Run Locally
 
 ```bash
 npm install
-```
-
-Run locally:
-
-```bash
 npm run dev
 ```
 
@@ -176,15 +118,11 @@ First launch:
 Create your own PIN.
 ```
 
-## Environment Variables
-
-Create `.env.local`:
+## Environment
 
 ```bash
 cp .env.example .env.local
 ```
-
-Example:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
@@ -195,24 +133,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 1. Create a Supabase project.
 2. Open SQL Editor.
-3. Run:
+3. Run `supabase/schema.sql`.
+4. Add env values to `.env.local`.
 
-```sql
--- See full schema:
-supabase/schema.sql
+Tables:
+
+```txt
+profiles
+incomes
+expenses
+debts
+payments
+goals
+settings
 ```
-
-Tables included:
-
-- `profiles`
-- `incomes`
-- `expenses`
-- `debts`
-- `payments`
-- `goals`
-- `settings`
-
-Current MVP stores data locally for instant personal use. The Supabase schema is ready for the next sync/auth layer.
 
 ## Build
 
@@ -220,47 +154,30 @@ Current MVP stores data locally for instant personal use. The Supabase schema is
 npm run build
 ```
 
-## Deploy on Vercel
+## Deploy
 
 ```bash
 npm run build
 vercel
 ```
 
-Add Supabase environment variables in Vercel if database sync is enabled.
+## PWA Install
 
-## Install as PWA
+| Platform | Steps |
+|---|---|
+| Android Chrome | Open URL -> Menu -> Add to Home screen |
+| iPhone Safari | Open URL -> Share -> Add to Home Screen |
 
-Android Chrome:
+## Financial Score
 
-```txt
-Open app URL -> Menu -> Add to Home screen
-```
+Starts at `100`, then subtracts points for overspending, high shopping/gifts, missed payments, no savings, and low available cash.
 
-iPhone Safari:
-
-```txt
-Open app URL -> Share -> Add to Home Screen
-```
-
-## Financial Score Logic
-
-Starts from `100`, then subtracts points for:
-
-- Overspending
-- High shopping/gifts spending
-- Missed payments
-- No savings
-- Low available cash
-
-Score labels:
-
-```txt
-80-100  Strong month
-60-79   Controlled but needs improvement
-40-59   Risky month
-0-39    Serious spending problem
-```
+| Score | Result |
+|---:|---|
+| 80-100 | Strong month |
+| 60-79 | Controlled but needs improvement |
+| 40-59 | Risky month |
+| 0-39 | Serious spending problem |
 
 ## Roadmap
 
@@ -270,7 +187,7 @@ Score labels:
 - Payment reminders
 - Recurring debt auto-schedule
 - Charts and trend insights
-- Export CSV
+- CSV export
 - Dark mode
 
 ## Commands
