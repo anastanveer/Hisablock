@@ -84,24 +84,7 @@ public/
   icon.svg
 supabase/
   schema.sql
-```
 
-## Demo Data
-
-| Item | Amount |
-|---|---:|
-| Salary | AED 8,000 |
-| Current Cash | AED 4,247.56 |
-| Sukuk Finance | AED 40,266.67 |
-| ENBD Noon Card | AED 3,714.05 |
-| Mastercard Titanium | AED 6,914.84 |
-| Tabby Statement | AED 1,604.54 |
-| Tabby Pay Later | AED 892.17 |
-| Office Balance | AED 4,000 |
-
-## Run Locally
-
-```bash
 npm install
 npm run dev
 ```
