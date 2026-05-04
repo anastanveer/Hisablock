@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- Animated Header -->
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=200&section=header&text=HisabLock&fontSize=70&fontAlignY=35&animation=twinkling&fontColor=ffffff&desc=Personal%20Finance%20%E2%80%94%20Locked%20%26%20Loaded&descAlignY=60&descSize=18" width="100%" />
+<img src="public/readme-banner.svg" width="100%" alt="HisabLock Banner" />
 
 <!-- Badges -->
 <p>
