@@ -21,6 +21,7 @@ body {
   overscroll-behavior-y: none;
   overflow-x: hidden;
   touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -73,6 +74,8 @@ html {
 .premium-scroll {
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .premium-scroll::-webkit-scrollbar {

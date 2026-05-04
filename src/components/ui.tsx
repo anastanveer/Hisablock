@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { Children, isValidElement, useEffect, useMemo, useRef, useState } from "react";
+import type { ButtonHTMLAttributes, ChangeEvent, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <section className={`min-w-0 overflow-hidden rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_14px_38px_rgba(15,23,42,0.07)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/88 dark:shadow-[0_18px_70px_rgba(0,0,0,0.35)] ${className}`}>{children}</section>;
@@ -26,8 +27,76 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-emerald-500 dark:border-white/10 dark:bg-slate-950/60 dark:text-white dark:placeholder:text-slate-500" {...props} />;
 }
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-emerald-500 dark:border-white/10 dark:bg-slate-950/60 dark:text-white" {...props} />;
+export function Select({ children, name, defaultValue, value, onChange, disabled }: SelectHTMLAttributes<HTMLSelectElement>) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const options = useMemo(
+    () =>
+      Children.toArray(children)
+        .filter(isValidElement)
+        .map((child) => {
+          const props = child.props as { value?: string; children?: ReactNode };
+          const label = String(props.children ?? props.value ?? "");
+          return { label, value: String(props.value ?? label) };
+        }),
+    [children],
+  );
+  const [draft, setDraft] = useState(String(defaultValue ?? options[0]?.value ?? ""));
+  const selected = String(value ?? draft);
+  const label = options.find((option) => option.value === selected)?.label || selected;
+
+  useEffect(() => {
+    if (!open) return;
+    const update = () => setRect(buttonRef.current?.getBoundingClientRect() || null);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative min-w-0">
+      <input type="hidden" name={name} value={selected} />
+      <button
+        ref={buttonRef}
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((item) => !item)}
+        className={`flex h-12 w-full min-w-0 items-center justify-between gap-3 rounded-2xl border px-4 text-left text-sm font-black shadow-[0_10px_24px_rgba(15,23,42,0.06)] outline-none transition active:scale-[0.99] disabled:opacity-50 ${open ? "border-emerald-500 bg-emerald-50 text-slate-950 dark:bg-emerald-500/12 dark:text-white" : "border-slate-200 bg-white text-slate-950 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"}`}
+      >
+        <span className="min-w-0 truncate">{label}</span>
+        <span className={`shrink-0 text-lg leading-none text-emerald-500 transition ${open ? "rotate-180" : ""}`}>⌄</span>
+      </button>
+      {open && rect && (
+        <div
+          className="fixed z-[120] overflow-hidden rounded-3xl border border-white/80 bg-white/95 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.24)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_24px_80px_rgba(0,0,0,0.58)]"
+          style={{ left: rect.left, top: rect.bottom + 8, width: rect.width, maxHeight: Math.min(280, window.innerHeight - rect.bottom - 24) }}
+        >
+          <div className="premium-scroll max-h-[inherit] overflow-y-auto pr-1">
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  if (value === undefined) setDraft(option.value);
+                  setOpen(false);
+                  onChange?.({ target: { value: option.value, name } } as unknown as ChangeEvent<HTMLSelectElement>);
+                }}
+                className={`mb-1 flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-black transition last:mb-0 ${option.value === selected ? "bg-emerald-500 text-white shadow-[0_12px_28px_rgba(16,185,129,0.25)]" : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"}`}
+              >
+                <span className="min-w-0 truncate">{option.label}</span>
+                {option.value === selected && <span className="shrink-0">✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
