@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-[24px] border border-white/70 bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/86 dark:shadow-[0_18px_70px_rgba(0,0,0,0.35)] ${className}`}>{children}</section>;
+  return <section className={`rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_14px_38px_rgba(15,23,42,0.07)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/88 dark:shadow-[0_18px_70px_rgba(0,0,0,0.35)] ${className}`}>{children}</section>;
 }
 
 export function Button({ className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -59,8 +59,9 @@ export function ProgressBar({ value, tone = "emerald" }: { value: number; tone?:
 
 export function StatCard({ label, value, tone = "slate" }: { label: string; value: string; tone?: "slate" | "green" | "red" | "amber" }) {
   const color = tone === "green" ? "text-emerald-600 dark:text-emerald-400" : tone === "red" ? "text-red-600 dark:text-red-400" : tone === "amber" ? "text-amber-600 dark:text-amber-300" : "text-slate-950 dark:text-white";
+  const bg = tone === "green" ? "bg-emerald-50 dark:bg-emerald-500/10" : tone === "red" ? "bg-red-50 dark:bg-red-500/10" : tone === "amber" ? "bg-amber-50 dark:bg-amber-500/10" : "bg-white dark:bg-slate-900";
   return (
-    <Card className="p-3">
+    <Card className={`${bg} p-3 shadow-[0_10px_28px_rgba(15,23,42,0.05)]`}>
       <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
       <p className={`mt-1 text-lg font-bold ${color}`}>{value}</p>
     </Card>

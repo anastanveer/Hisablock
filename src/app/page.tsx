@@ -197,7 +197,7 @@ export default function Home() {
 
   return (
     <main className={`${isDark ? "dark" : ""} min-h-dvh bg-[#F5F7FB] text-slate-950 dark:bg-[radial-gradient(circle_at_top,#064E3B_0,#020617_42%,#0F172A_100%)] dark:text-white`}>
-      <div className="mx-auto min-h-dvh w-full max-w-md bg-[linear-gradient(180deg,#F8FAFC_0%,#EEF4F8_100%)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-[linear-gradient(180deg,#07131F_0%,#020617_100%)] md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
+      <div className="mx-auto min-h-dvh w-full max-w-md bg-[linear-gradient(180deg,#FFFFFF_0%,#F3F7FB_48%,#EEF4F8_100%)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-[linear-gradient(180deg,#07131F_0%,#020617_100%)] md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
         <header className="sticky top-0 z-20 bg-white/75 px-5 pb-3 pt-[calc(1.1rem+env(safe-area-inset-top))] backdrop-blur-2xl dark:bg-slate-950/70">
           <div className="flex items-center justify-between">
             <div>
@@ -215,10 +215,10 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="grid gap-4 px-5 pt-4">
+        <div className="grid gap-4 px-5 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-4">
           {tab === "Home" && (
             <>
-              <Card className="overflow-hidden bg-slate-950 p-5 text-white ring-1 ring-white/40 dark:bg-slate-900">
+              <Card className="overflow-hidden !bg-[linear-gradient(145deg,#111827_0%,#020617_100%)] p-5 !text-white ring-1 ring-white/40 dark:!bg-slate-900">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-slate-300">Current Cash</p>
@@ -231,7 +231,7 @@ export default function Home() {
                 </div>
                 <div className="mt-5 grid gap-2">
                   {state.cash_accounts.map((account) => (
-                    <div key={account.id} className="flex items-center justify-between rounded-2xl bg-white/8 px-3 py-2 text-sm">
+                    <div key={account.id} className="flex items-center justify-between rounded-2xl bg-white/[0.08] px-3 py-2 text-sm">
                       <span className="text-slate-300">{account.title}</span>
                       <span className="font-black">{money(account.amount, currency)}</span>
                     </div>
@@ -239,7 +239,7 @@ export default function Home() {
                 </div>
               </Card>
 
-              <Card className="border-emerald-200 bg-emerald-50/90 p-4 dark:border-emerald-500/15 dark:bg-emerald-500/10">
+              <Card className="border-emerald-100 bg-white p-4 dark:border-emerald-500/15 dark:bg-emerald-500/10">
                 <div className="grid grid-cols-2 gap-3">
                   <Mini label="Reserved for Rent" value={money(rentAmount, currency)} />
                   <Mini label="Free After Rent" value={money(freeAfterRent, currency)} />
@@ -247,13 +247,13 @@ export default function Home() {
                 <p className="mt-3 rounded-2xl bg-amber-100 px-3 py-2 text-sm font-black text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Rent must be paid first</p>
               </Card>
 
-              <Card className={`${safe < 100 ? "bg-red-600 text-white" : safe < 500 ? "bg-amber-500 text-white" : "bg-white text-slate-950 dark:bg-slate-900 dark:text-white"} p-5`}>
+              <Card className={`${safe < 100 ? "!bg-red-600 !text-white" : safe < 500 ? "!bg-amber-500 !text-white" : "!bg-white !text-slate-950 dark:!bg-slate-900 dark:!text-white"} p-5`}>
                 <p className="text-sm font-semibold opacity-75">Safe to Spend</p>
                 <p className="mt-2 text-4xl font-black tracking-tight">{money(safe, currency)}</p>
                 <p className="mt-3 text-sm opacity-85">{safe < 100 ? "Your available cash is already reserved for rent. Do not spend extra." : "After rent, 15 day payments and AED 500 buffer."}</p>
               </Card>
 
-              {(upcoming15Total + rentAmount > availableCash || safe < 100) && <Alert text={safe < 100 ? "Your available cash is already reserved for rent. Do not spend extra." : "Upcoming payments are greater than your available cash."} tone="red" />}
+              {safe >= 100 && upcoming15Total + rentAmount > availableCash && <Alert text="Upcoming payments are greater than your available cash." tone="red" />}
 
               <div className="grid grid-cols-2 gap-3">
                 <StatCard label="Upcoming 7 days" value={money(upcoming7Total, currency)} tone="amber" />
@@ -288,22 +288,25 @@ export default function Home() {
                 <ProgressBar value={100 - (debt / Math.max(1, sum(state.debts, (d) => d.total_amount))) * 100} />
               </Card>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-4 gap-2">
                 <Quick icon="income" label="Income" onClick={() => setSheet({ kind: "income" })} />
                 <Quick icon="expense" label="Expense" onClick={() => setSheet({ kind: "expense" })} />
                 <Quick icon="card" label="Debt" onClick={() => setSheet({ kind: "debt" })} />
-                <Quick icon="calendar" label="Payment" onClick={() => setSheet({ kind: "payment" })} />
+                <Quick icon="calendar" label="Pay" onClick={() => setSheet({ kind: "payment" })} />
               </div>
-
-              <Card>
-                <h2 className="mb-3 text-base font-bold">Upcoming Payments</h2>
-                <ListPayments payments={upcoming15} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} />
-              </Card>
 
               <Card>
                 <h2 className="mb-2 text-base font-bold">This Month</h2>
                 <p className={`text-2xl font-black ${income - expenses >= 0 ? "text-emerald-600" : "text-red-600"}`}>{money(income - expenses, currency)}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{income - expenses >= 0 ? "Saving this month" : "Loss this month"}</p>
+              </Card>
+
+              <Card className="!bg-white !text-slate-950 dark:!bg-slate-900 dark:!text-white">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-base font-bold">Upcoming Payments</h2>
+                  <button className="text-xs font-black text-emerald-600" onClick={() => setTab("Calendar")}>View all</button>
+                </div>
+                <ListPayments payments={upcoming15.slice(0, 3)} currency={currency} onPaid={markPaymentPaid} onEdit={(id) => setSheet({ kind: "payment", id })} />
               </Card>
             </>
           )}
@@ -391,7 +394,7 @@ export default function Home() {
           )}
         </div>
 
-        <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-4 pb-4 md:bottom-6">
+        <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:bottom-6">
           <div className="grid grid-cols-5 items-end gap-1 rounded-[30px] border border-white/70 bg-white/95 p-2 shadow-[0_20px_55px_rgba(15,23,42,0.20)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/[0.94] dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
             {navItems.map((item) => {
               const active = tab === item.tab;
@@ -619,8 +622,8 @@ function Alert({ text, tone }: { text: string; tone: "red" | "amber" }) {
 
 function Quick({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-3 rounded-[22px] bg-white/92 p-4 text-left text-sm font-black shadow-[0_12px_35px_rgba(15,23,42,0.08)] ring-1 ring-white active:scale-[0.98] dark:bg-slate-900/88 dark:ring-white/10">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-950 text-white dark:bg-emerald-500 dark:text-slate-950">
+    <button onClick={onClick} className="flex flex-col items-center gap-2 rounded-[22px] bg-white p-3 text-center text-xs font-black text-slate-700 shadow-[0_10px_28px_rgba(15,23,42,0.06)] ring-1 ring-slate-100 active:scale-[0.98] dark:bg-slate-900/88 dark:text-slate-200 dark:ring-white/10">
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-slate-950 text-white shadow-[0_10px_22px_rgba(15,23,42,0.18)] dark:bg-emerald-500 dark:text-slate-950">
         <Icon name={icon} />
       </span>
       {label}
@@ -629,7 +632,7 @@ function Quick({ icon, label, onClick }: { icon: IconName; label: string; onClic
 }
 
 function Mini({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.07]"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><p className="font-black">{value}</p></div>;
+  return <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-white/[0.07] dark:ring-white/10"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><p className="font-black">{value}</p></div>;
 }
 
 function AssetCard({ title, value, note }: { title: string; value: string; note: string }) {
@@ -730,7 +733,7 @@ function PaymentGroup({ title, payments, currency, onPaid, onEdit, onDelete }: {
 function PaymentCard({ payment, currency, onPaid, onEdit, onDelete }: { payment: Payment; currency: string; onPaid: () => void; onEdit: () => void; onDelete?: () => void }) {
   const critical = payment.priority === "critical" || payment.category === "Rent";
   return (
-    <div className={`rounded-2xl p-3 ${critical ? "bg-red-50 ring-1 ring-red-100 dark:bg-red-500/10 dark:ring-red-500/20" : "bg-slate-50 dark:bg-white/[0.07]"}`}>
+    <div className={`rounded-2xl p-3 ${critical ? "bg-red-50 ring-1 ring-red-100 dark:bg-red-500/10 dark:ring-red-500/20" : "bg-slate-50 ring-1 ring-slate-100 dark:bg-white/[0.07] dark:ring-white/10"}`}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-bold text-slate-950 dark:text-white">{payment.title}</p>
