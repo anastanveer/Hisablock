@@ -261,9 +261,7 @@ export default function Home() {
               <Card>
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h2 className="text-base font-bold">Expenses</h2>
-                  <Select value={expenseFilter} onChange={(e) => setExpenseFilter(e.target.value)}>
-                    {["Today", "This week", "This month", ...expenseCategories].map((item) => <option key={item}>{item}</option>)}
-                  </Select>
+                  <FilterDropdown value={expenseFilter} options={["Today", "This week", "This month", ...expenseCategories]} onChange={setExpenseFilter} />
                 </div>
                 <TransactionList items={filteredExpenses} type="expense" currency={currency} onEdit={(id) => setSheet({ kind: "expense", id })} onDelete={(id) => deleteRecord("expense", id)} />
               </Card>
@@ -551,6 +549,43 @@ function Empty({ text }: { text: string }) {
 
 function SectionTitle({ title, action, onClick }: { title: string; action: string; onClick: () => void }) {
   return <div className="flex items-center justify-between"><h2 className="text-xl font-black">{title}</h2><button className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] dark:bg-emerald-500 dark:text-slate-950" onClick={onClick}>{action}</button></div>;
+}
+
+function FilterDropdown({ value, options, onChange }: { value: string; options: string[]; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative w-44">
+      <button
+        type="button"
+        onClick={() => setOpen((item) => !item)}
+        className={`flex h-12 w-full items-center justify-between rounded-2xl border px-4 text-left text-sm font-bold shadow-[0_10px_28px_rgba(15,23,42,0.08)] transition active:scale-[0.98] ${open ? "border-emerald-500 bg-emerald-50 text-slate-950 dark:bg-emerald-500/12 dark:text-white" : "border-slate-200 bg-white text-slate-950 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"}`}
+      >
+        <span className="truncate">{value}</span>
+        <span className={`text-emerald-500 transition ${open ? "rotate-180" : ""}`}>⌄</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-14 z-40 max-h-72 w-56 overflow-hidden rounded-3xl border border-white/70 bg-white/95 p-2 shadow-[0_22px_60px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
+          <div className="premium-scroll max-h-64 overflow-y-auto pr-1">
+            {options.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  onChange(item);
+                  setOpen(false);
+                }}
+                className={`mb-1 flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-bold transition last:mb-0 ${item === value ? "bg-emerald-500 text-white shadow-[0_10px_24px_rgba(16,185,129,0.25)]" : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"}`}
+              >
+                <span>{item}</span>
+                {item === value && <span>✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function TransactionList({ items, type, currency, onEdit, onDelete }: { items: (Income[] | Expense[])[number][]; type: "income" | "expense"; currency: string; onEdit: (id: string) => void; onDelete: (id: string) => void }) {
