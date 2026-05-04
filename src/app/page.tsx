@@ -565,8 +565,8 @@ function FilterDropdown({ value, options, onChange }: { value: string; options: 
         <span className={`text-emerald-500 transition ${open ? "rotate-180" : ""}`}>⌄</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-14 z-40 max-h-72 w-56 overflow-hidden rounded-3xl border border-white/70 bg-white/95 p-2 shadow-[0_22px_60px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
-          <div className="premium-scroll max-h-64 overflow-y-auto pr-1">
+        <div className="absolute bottom-14 right-0 z-[90] w-56 overflow-hidden rounded-3xl border border-white/70 bg-white/95 p-2 shadow-[0_22px_60px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
+          <div className="premium-scroll max-h-56 overflow-y-auto pr-1">
             {options.map((item) => (
               <button
                 key={item}
