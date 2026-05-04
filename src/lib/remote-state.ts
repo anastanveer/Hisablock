@@ -104,6 +104,18 @@ export async function loadRemoteState() {
   return fallback;
 }
 
+export async function getRemoteStatus() {
+  const supabase = getSupabase();
+  if (!supabase) return { label: "Local mode", ok: false };
+  const [accounts, debts, payments] = await Promise.all([
+    supabase.from("accounts").select("id", { count: "exact", head: true }),
+    supabase.from("debts").select("id", { count: "exact", head: true }),
+    supabase.from("payments").select("id", { count: "exact", head: true }),
+  ]);
+  const count = (accounts.count || 0) + (debts.count || 0) + (payments.count || 0);
+  return count > 0 ? { label: "Cloud tables synced", ok: true } : { label: "Cloud connected, no finance rows", ok: false };
+}
+
 export async function saveRemoteState(state: FinanceState) {
   const supabase = getSupabase();
   if (!supabase) return;

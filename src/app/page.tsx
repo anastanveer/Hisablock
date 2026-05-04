@@ -4,7 +4,7 @@ import type { ChangeEvent, Dispatch, FormEvent, ReactNode, SetStateAction } from
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Field, GhostButton, Input, ProgressBar, Select, Sheet, StatCard, Textarea } from "@/components/ui";
 import { categoryTotals, daysFromNow, debtPaidThisMonth, dueTomorrow, financialScore, freeCashAfterRent, money, monthlyExpenses, monthlyIncome, overdue, recordDebtPayment, rentDue, safeCash, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
-import { getSupabase, loadRemoteState, remoteEnabled, saveRemoteState } from "@/lib/remote-state";
+import { getRemoteStatus, getSupabase, loadRemoteState, remoteEnabled, saveRemoteState } from "@/lib/remote-state";
 import { seedState } from "@/lib/seed";
 import type { Debt, Expense, FinanceState, Goal, Income, Payment, PaymentHistory } from "@/lib/types";
 
@@ -180,6 +180,7 @@ export default function Home() {
   const [sheet, setSheet] = useState<{ kind: SheetKind; id?: string } | null>(null);
   const [expenseFilter, setExpenseFilter] = useState("This month");
   const [remoteReady, setRemoteReady] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("Checking sync...");
   const remoteSignature = useRef("");
 
   useEffect(() => {
@@ -194,6 +195,9 @@ export default function Home() {
       if (!active) return;
       setState(next);
       saveFinanceState(next);
+      getRemoteStatus().then((status) => {
+        if (active) setSyncStatus(status.label);
+      });
       remoteSignature.current = stateSignature(next);
       setRemoteReady(true);
       if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, DEFAULT_PIN);
@@ -399,6 +403,7 @@ export default function Home() {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600">HisabLock</p>
               <h1 className="text-2xl font-black tracking-tight">Good evening</h1>
+              <p className="mt-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-300">{syncStatus}</p>
             </div>
             <div className="flex gap-2">
               <button className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-900 shadow-[0_10px_28px_rgba(15,23,42,0.10)] dark:bg-white/10 dark:text-white" onClick={toggleTheme} aria-label="Toggle theme">
