@@ -6,9 +6,16 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const remoteEnabled = Boolean(url && anonKey);
 
-export const supabase: SupabaseClient | null = remoteEnabled ? createClient(url!, anonKey!) : null;
+let client: SupabaseClient | null = null;
+
+export function getSupabase() {
+  if (!remoteEnabled) return null;
+  client ||= createClient(url!, anonKey!);
+  return client;
+}
 
 export async function loadRemoteState() {
+  const supabase = getSupabase();
   if (!supabase) return null;
   const { data, error } = await supabase.from("app_state").select("state").eq("id", "default").maybeSingle();
   if (error) return null;
@@ -16,6 +23,7 @@ export async function loadRemoteState() {
 }
 
 export async function saveRemoteState(state: FinanceState) {
+  const supabase = getSupabase();
   if (!supabase) return;
   await supabase.from("app_state").upsert({
     id: "default",

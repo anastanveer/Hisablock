@@ -3,10 +3,10 @@
 import type { ChangeEvent, Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Field, GhostButton, Input, ProgressBar, Select, Sheet, StatCard, Textarea } from "@/components/ui";
-import { categoryTotals, daysFromNow, debtPaidThisMonth, dueTomorrow, financialScore, freeCashAfterRent, money, monthlyExpenses, monthlyIncome, overdue, rentDue, safeCash, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
-import { loadRemoteState, remoteEnabled, saveRemoteState, supabase } from "@/lib/remote-state";
+import { categoryTotals, daysFromNow, debtPaidThisMonth, dueTomorrow, financialScore, freeCashAfterRent, money, monthlyExpenses, monthlyIncome, overdue, recordDebtPayment, rentDue, safeCash, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
+import { getSupabase, loadRemoteState, remoteEnabled, saveRemoteState } from "@/lib/remote-state";
 import { seedState } from "@/lib/seed";
-import type { Debt, Expense, FinanceState, Goal, Income, Payment } from "@/lib/types";
+import type { Debt, Expense, FinanceState, Goal, Income, Payment, PaymentHistory } from "@/lib/types";
 
 const DATA_KEY = "hisab-pro-state-v1";
 const BACKUP_KEY = "hisab-pro-state-backup-v1";
@@ -83,6 +83,7 @@ const normalizeState = (value?: Partial<FinanceState> | null): FinanceState => {
     expenses: removeDemo(value.expenses),
     debts: addRealDefaults ? mergeById(seedState.debts, removeDemo(value.debts)) : removeDemo(value.debts),
     payments: addRealDefaults ? mergeById(seedState.payments, removeDemo(value.payments)) : removeDemo(value.payments),
+    payment_history: value.payment_history || [],
     goals: addRealDefaults ? mergeById(seedState.goals, removeDemo(value.goals)) : removeDemo(value.goals),
     settings: {
       ...seedState.settings,
@@ -227,7 +228,7 @@ export default function Home() {
   }, [hydrated, remoteReady, state]);
 
   useEffect(() => {
-    const client = supabase;
+    const client = getSupabase();
     if (!client) return;
     const channel = client
       .channel("app-state-sync")
@@ -361,44 +362,15 @@ export default function Home() {
 
   function markPaymentPaid(payment: Payment) {
     if (payment.status === "paid") return;
-    setState((s) => {
-      const linkedDebt = s.debts.find((d) => d.id === payment.debt_id);
-      const before = linkedDebt?.remaining_amount;
-      const after = before === undefined ? undefined : Math.max(0, before - payment.amount);
-      return {
-        ...applyCashDelta(s, -payment.amount),
-        payments: s.payments.map((p) =>
-          p.id === payment.id ? { ...p, status: "paid", paid_date: todayISO(), balance_before: before, balance_after: after } : p,
-        ),
-        debts: s.debts.map((d) => (d.id === payment.debt_id && after !== undefined ? { ...d, remaining_amount: after, status: after === 0 ? "paid" : "active" } : d)),
-      };
+    setState((s) => payment.debt_id ? recordDebtPayment(s, payment.debt_id, payment.id, payment.amount) : {
+      ...applyCashDelta(s, -payment.amount),
+      payments: s.payments.map((p) => (p.id === payment.id ? { ...p, status: "paid", paid_date: todayISO() } : p)),
     });
   }
 
   function payDebtInstallment(debtItem: Debt) {
     const amount = debtItem.monthly_payment || debtItem.remaining_amount;
-    const before = debtItem.remaining_amount;
-    const remaining = Math.max(0, debtItem.remaining_amount - amount);
-    setState((s) => ({
-      ...applyCashDelta(s, -amount),
-      debts: s.debts.map((d) => (d.id === debtItem.id ? { ...d, remaining_amount: remaining, status: remaining === 0 ? "paid" : "active" } : d)),
-      payments: [
-        {
-          id: uid(),
-          debt_id: debtItem.id,
-          title: debtItem.title,
-          amount,
-          due_date: todayISO(),
-          paid_date: todayISO(),
-          status: "paid",
-          category: "Debt Payment",
-          priority: debtItem.priority,
-          balance_before: before,
-          balance_after: remaining,
-        },
-        ...s.payments,
-      ],
-    }));
+    setState((s) => recordDebtPayment(s, debtItem.id, undefined, amount));
   }
 
   if (!authed) {
@@ -626,6 +598,10 @@ export default function Home() {
                 </div>
               </Card>
               <Card>
+                <h2 className="mb-3 text-base font-bold">Debt Payment History</h2>
+                <PaymentHistoryList items={state.payment_history || []} debts={state.debts} currency={currency} />
+              </Card>
+              <Card>
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="text-base font-bold">Goals</h2>
                   <button className="text-sm font-bold text-emerald-600" onClick={() => setSheet({ kind: "goal" })}>Add</button>
@@ -748,14 +724,7 @@ function FinanceSheet({ sheet, state, setState, close, resetData }: { sheet: { k
     };
     setState((s) => {
       if (!payment && next.status === "paid" && next.debt_id) {
-        const linkedDebt = s.debts.find((d) => d.id === next.debt_id);
-        const before = linkedDebt?.remaining_amount;
-        const after = before === undefined ? undefined : Math.max(0, before - next.amount);
-        return {
-          ...applyCashDelta(s, -next.amount),
-          payments: [{ ...next, paid_date: todayISO(), balance_before: before, balance_after: after }, ...s.payments],
-          debts: s.debts.map((d) => (d.id === next.debt_id && after !== undefined ? { ...d, remaining_amount: after, status: after === 0 ? "paid" : "active" } : d)),
-        };
+        return recordDebtPayment({ ...s, payments: [next, ...s.payments] }, next.debt_id, next.id, next.amount);
       }
       return { ...s, payments: payment ? s.payments.map((i) => (i.id === next.id ? next : i)) : [next, ...s.payments] };
     });
@@ -1014,6 +983,32 @@ function PaymentGroup({ title, payments, currency, onPaid, onEdit, onDelete }: {
       {!payments.length && <Empty text="Nothing here." />}
       <div className="grid gap-2">{payments.map((p) => <PaymentCard key={p.id} payment={p} currency={currency} onPaid={() => onPaid(p)} onEdit={() => onEdit(p.id)} onDelete={() => onDelete(p.id)} />)}</div>
     </Card>
+  );
+}
+
+function PaymentHistoryList({ items, debts, currency }: { items: PaymentHistory[]; debts: Debt[]; currency: string }) {
+  if (!items.length) return <Empty text="No debt payments recorded yet." />;
+  return (
+    <div className="grid gap-2">
+      {items.slice(0, 8).map((item) => {
+        const debt = debts.find((d) => d.id === item.debt_id);
+        return (
+          <div key={item.id} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-white/[0.07] dark:ring-white/10">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black">{item.title}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{item.payment_date} · {debt?.title || "Linked debt"}</p>
+              </div>
+              <p className="shrink-0 text-sm font-black text-emerald-600 dark:text-emerald-300">{money(item.amount, currency)}</p>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <Mini label="Before" value={money(item.balance_before, currency)} />
+              <Mini label="After" value={money(item.balance_after, currency)} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

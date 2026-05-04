@@ -18,7 +18,7 @@ export const seedState: FinanceState = {
     salary_day: 1,
     currency: "AED",
     theme: "light",
-    profile_version: 5,
+    profile_version: 6,
   },
   incomes: [
     {
@@ -139,5 +139,6 @@ export const seedState: FinanceState = {
     { id: "real-pay-tabby-8-june", debt_id: "real-debt-tabby-later", title: "Tabby Installment", amount: 25.97, due_date: "2026-06-08", status: "unpaid", category: "Debt Payment", priority: "medium" },
     { id: "real-pay-tabby-23-june", debt_id: "real-debt-tabby-later", title: "Tabby Installment", amount: 36.59, due_date: "2026-06-23", status: "unpaid", category: "Debt Payment", priority: "medium" },
   ],
+  payment_history: [],
   goals: [],
 };

@@ -61,7 +61,63 @@ export const safeToSpend = (state: FinanceState) =>
   );
 
 export const debtPaidThisMonth = (state: FinanceState) =>
-  sum(state.payments.filter((p) => p.debt_id && p.status === "paid" && p.paid_date && isSameMonth(p.paid_date)), (p) => p.amount);
+  sum(state.payment_history.filter((p) => isSameMonth(p.payment_date)), (p) => p.amount);
+
+export const recordDebtPayment = (state: FinanceState, debtId: string, billId: string | undefined, amount: number) => {
+  const debt = state.debts.find((item) => item.id === debtId);
+  if (!debt || amount <= 0) return state;
+  const bill = state.payments.find((item) => item.id === billId);
+  const before = debt.remaining_amount;
+  const after = Math.max(0, before - amount);
+  const paymentDate = todayISO();
+  const history = {
+    id: uid(),
+    debt_id: debtId,
+    bill_id: billId,
+    title: bill?.title || debt.title,
+    amount,
+    payment_date: paymentDate,
+    category: bill?.category || "Debt Payment",
+    notes: bill?.notes || debt.notes,
+    balance_before: before,
+    balance_after: after,
+  };
+  return {
+    ...state,
+    current_cash: state.current_cash - amount,
+    cash_accounts: state.cash_accounts?.length
+      ? state.cash_accounts.map((account, index, accounts) =>
+          index === accounts.length - 1 ? { ...account, amount: account.amount - amount } : account,
+        )
+      : state.cash_accounts,
+    debts: state.debts.map((item) =>
+      item.id === debtId ? { ...item, remaining_amount: after, status: after === 0 ? "paid" : "active" } : item,
+    ),
+    payments: billId
+      ? state.payments.map((item) =>
+          item.id === billId
+            ? { ...item, status: "paid", paid_date: paymentDate, balance_before: before, balance_after: after }
+            : item,
+        )
+      : [
+          {
+            id: uid(),
+            debt_id: debtId,
+            title: debt.title,
+            amount,
+            due_date: paymentDate,
+            paid_date: paymentDate,
+            status: "paid",
+            category: "Debt Payment",
+            priority: debt.priority,
+            balance_before: before,
+            balance_after: after,
+          },
+          ...state.payments,
+        ],
+    payment_history: [history, ...(state.payment_history || [])],
+  } satisfies FinanceState;
+};
 
 export const shoppingGiftTotal = (expenses: Expense[]) =>
   sum(expenses.filter((e) => isSameMonth(e.expense_date) && ["Shopping", "Wife/Gifts"].includes(e.category)), (e) => e.amount);

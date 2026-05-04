@@ -7,7 +7,7 @@ create table if not exists app_state (
 );
 
 insert into app_state (id, state)
-values ('default', '{"current_cash":4247.56,"cash_accounts":[{"id":"real-account-nbd","title":"NBD/current bank balance","amount":4247.56,"include_in_safe":true}],"assets":[{"id":"real-asset-binance","title":"Binance USDT Asset","amount":300,"currency":"USDT","include_in_safe":false,"notes":"Crypto asset only. Not included in Safe to Spend."}],"incomes":[{"id":"real-income-salary","title":"Monthly Salary","amount":8000,"source":"Salary","income_date":"2026-05-01","is_recurring":true,"notes":"Recurring monthly salary."}],"expenses":[],"debts":[],"payments":[{"id":"real-pay-rent-may","title":"Rent Payment","amount":4200,"due_date":"2026-05-10","status":"unpaid","category":"Rent","priority":"critical","is_recurring":true,"recurring_day":10,"reminder_day":9,"notes":"Current cash is reserved for this rent payment."}],"goals":[],"settings":{"survival_buffer":500,"salary_day":1,"currency":"AED","theme":"light","profile_version":5}}'::jsonb)
+values ('default', '{"current_cash":4247.56,"cash_accounts":[{"id":"real-account-nbd","title":"NBD/current bank balance","amount":4247.56,"include_in_safe":true}],"assets":[{"id":"real-asset-binance","title":"Binance USDT Asset","amount":300,"currency":"USDT","include_in_safe":false,"notes":"Crypto asset only. Not included in Safe to Spend."}],"incomes":[{"id":"real-income-salary","title":"Monthly Salary","amount":8000,"source":"Salary","income_date":"2026-05-01","is_recurring":true,"notes":"Recurring monthly salary."}],"expenses":[],"debts":[],"payments":[{"id":"real-pay-rent-may","title":"Rent Payment","amount":4200,"due_date":"2026-05-10","status":"unpaid","category":"Rent","priority":"critical","is_recurring":true,"recurring_day":10,"reminder_day":9,"notes":"Current cash is reserved for this rent payment."}],"payment_history":[],"goals":[],"settings":{"survival_buffer":500,"salary_day":1,"currency":"AED","theme":"light","profile_version":6}}'::jsonb)
 on conflict (id) do nothing;
 
 do $$
@@ -149,6 +149,33 @@ create table if not exists settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists app_settings (
+  id text primary key default 'default',
+  survival_buffer numeric(12,2) not null default 500,
+  salary_day int not null default 1 check (salary_day between 1 and 31),
+  currency text not null default 'AED',
+  theme text not null default 'light',
+  updated_at timestamptz not null default now()
+);
+
+insert into app_settings (id, survival_buffer, salary_day, currency, theme)
+values ('default', 500, 1, 'AED', 'light')
+on conflict (id) do nothing;
+
+create table if not exists payment_history (
+  id text primary key,
+  debt_id text not null,
+  bill_id text,
+  title text not null,
+  amount numeric(12,2) not null check (amount >= 0),
+  payment_date date not null,
+  category text,
+  notes text,
+  balance_before numeric(12,2) not null,
+  balance_after numeric(12,2) not null,
+  created_at timestamptz not null default now()
+);
+
 create or replace function set_updated_at()
 returns trigger as $$
 begin
@@ -183,3 +210,6 @@ create trigger settings_updated_at before update on settings for each row execut
 
 drop trigger if exists app_state_updated_at on app_state;
 create trigger app_state_updated_at before update on app_state for each row execute function set_updated_at();
+
+drop trigger if exists app_settings_updated_at on app_settings;
+create trigger app_settings_updated_at before update on app_settings for each row execute function set_updated_at();

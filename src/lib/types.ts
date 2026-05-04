@@ -75,6 +75,19 @@ export interface Payment {
   notes?: string;
 }
 
+export interface PaymentHistory {
+  id: string;
+  debt_id: string;
+  bill_id?: string;
+  title: string;
+  amount: number;
+  payment_date: string;
+  category?: string;
+  notes?: string;
+  balance_before: number;
+  balance_after: number;
+}
+
 export interface Goal {
   id: string;
   title: string;
@@ -101,6 +114,7 @@ export interface FinanceState {
   expenses: Expense[];
   debts: Debt[];
   payments: Payment[];
+  payment_history: PaymentHistory[];
   goals: Goal[];
   settings: Settings;
 }
