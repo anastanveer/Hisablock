@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent, Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Field, GhostButton, Input, ProgressBar, Select, Sheet, StatCard, Textarea } from "@/components/ui";
 import { categoryTotals, daysFromNow, debtPaidThisMonth, dueTomorrow, financialScore, freeCashAfterRent, money, monthlyExpenses, monthlyIncome, overdue, rentDue, safeCash, safeToSpend, scoreLabel, shoppingGiftTotal, sum, todayISO, totalDebt, uid, upcoming } from "@/lib/finance";
 import { loadRemoteState, remoteEnabled, saveRemoteState, supabase } from "@/lib/remote-state";
@@ -67,14 +67,17 @@ const mergeById = <T extends { id: string }>(base: T[], saved?: T[]) => {
   return [...items.values()];
 };
 
-const normalizeState = (value: FinanceState): FinanceState => {
+const stateSignature = (value: FinanceState) => JSON.stringify(value);
+
+const normalizeState = (value?: Partial<FinanceState> | null): FinanceState => {
+  if (!value || typeof value !== "object") return seedState;
   return {
     ...seedState,
     ...value,
     cash_accounts: mergeById(seedState.cash_accounts, removeDemo(value.cash_accounts)),
     assets: removeDemo(value.assets),
     incomes: removeDemo(value.incomes),
-    expenses: value.expenses || [],
+    expenses: removeDemo(value.expenses),
     debts: removeDemo(value.debts),
     payments: removeDemo(value.payments),
     goals: removeDemo(value.goals),
@@ -173,6 +176,7 @@ export default function Home() {
   const [sheet, setSheet] = useState<{ kind: SheetKind; id?: string } | null>(null);
   const [expenseFilter, setExpenseFilter] = useState("This month");
   const [remoteReady, setRemoteReady] = useState(false);
+  const remoteSignature = useRef("");
 
   useEffect(() => {
     let active = true;
@@ -186,6 +190,7 @@ export default function Home() {
       if (!active) return;
       setState(next);
       saveFinanceState(next);
+      remoteSignature.current = stateSignature(next);
       setRemoteReady(true);
       if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, DEFAULT_PIN);
       setHasPin(Boolean(localStorage.getItem(PIN_KEY)));
@@ -211,7 +216,11 @@ export default function Home() {
   }, [hydrated, state]);
 
   useEffect(() => {
-    if (hydrated && remoteReady) void saveRemoteState(state);
+    if (!hydrated || !remoteReady) return;
+    const signature = stateSignature(state);
+    if (remoteSignature.current === signature) return;
+    remoteSignature.current = signature;
+    void saveRemoteState(state);
   }, [hydrated, remoteReady, state]);
 
   useEffect(() => {
@@ -221,7 +230,12 @@ export default function Home() {
       .channel("app-state-sync")
       .on("postgres_changes", { event: "*", schema: "public", table: "app_state", filter: "id=eq.default" }, (payload) => {
         const remote = payload.new && "state" in payload.new ? (payload.new.state as FinanceState) : null;
-        if (remote) setState(normalizeState(remote));
+        if (!remote) return;
+        const next = normalizeState(remote);
+        const signature = stateSignature(next);
+        if (remoteSignature.current === signature) return;
+        remoteSignature.current = signature;
+        setState(next);
       })
       .subscribe();
     return () => {
