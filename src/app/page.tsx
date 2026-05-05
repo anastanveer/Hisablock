@@ -182,6 +182,7 @@ export default function Home() {
   const [remoteReady, setRemoteReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState("Checking sync...");
   const remoteSignature = useRef("");
+  const cloudPullTimer = useRef<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -234,8 +235,20 @@ export default function Home() {
   useEffect(() => {
     const client = getSupabase();
     if (!client) return;
+    const pullRemote = () => {
+      if (cloudPullTimer.current) window.clearTimeout(cloudPullTimer.current);
+      cloudPullTimer.current = window.setTimeout(async () => {
+        const remote = await loadRemoteState();
+        if (!remote) return;
+        const signature = stateSignature(remote);
+        if (remoteSignature.current === signature) return;
+        remoteSignature.current = signature;
+        setState(remote);
+        getRemoteStatus().then((status) => setSyncStatus(status.label));
+      }, 250);
+    };
     const channel = client
-      .channel("app-state-sync")
+      .channel("finance-cloud-sync")
       .on("postgres_changes", { event: "*", schema: "public", table: "app_state", filter: "id=eq.default" }, (payload) => {
         const remote = payload.new && "state" in payload.new ? (payload.new.state as FinanceState) : null;
         if (!remote) return;
@@ -245,8 +258,19 @@ export default function Home() {
         remoteSignature.current = signature;
         setState(next);
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "accounts" }, pullRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "assets" }, pullRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "incomes" }, pullRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, pullRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "debts" }, pullRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, pullRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_history" }, pullRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, pullRemote)
       .subscribe();
+    const interval = window.setInterval(pullRemote, 8000);
     return () => {
+      window.clearInterval(interval);
+      if (cloudPullTimer.current) window.clearTimeout(cloudPullTimer.current);
       void client.removeChannel(channel);
     };
   }, []);

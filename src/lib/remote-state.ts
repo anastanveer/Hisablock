@@ -31,7 +31,7 @@ function appSettingsToState(row: Record<string, unknown> | null): FinanceState["
     salary_day: Number(row?.salary_day ?? seedState.settings.salary_day),
     currency: String(row?.currency ?? "AED"),
     theme: row?.theme === "dark" ? "dark" : "light",
-    profile_version: 0,
+    profile_version: seedState.settings.profile_version,
   };
 }
 
