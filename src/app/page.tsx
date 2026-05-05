@@ -397,7 +397,7 @@ export default function Home() {
 
   return (
     <main className={`${isDark ? "dark" : ""} min-h-dvh min-w-0 overflow-x-hidden bg-[#F5F7FB] text-slate-950 dark:bg-[radial-gradient(circle_at_top,#064E3B_0,#020617_42%,#0F172A_100%)] dark:text-white`}>
-      <div className="mx-auto min-h-dvh w-full max-w-md min-w-0 overflow-x-hidden bg-[linear-gradient(180deg,#FFFFFF_0%,#F3F7FB_48%,#EEF4F8_100%)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-[linear-gradient(180deg,#07131F_0%,#020617_100%)] md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
+      <div className="mx-auto min-h-dvh w-full max-w-md min-w-0 overflow-x-hidden bg-[linear-gradient(180deg,#FFFFFF_0%,#F3F7FB_48%,#EEF4F8_100%)] pb-[calc(10rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-[linear-gradient(180deg,#07131F_0%,#020617_100%)] md:my-6 md:min-h-[900px] md:overflow-hidden md:rounded-[34px]">
         <header className="sticky top-0 z-20 bg-white/75 px-5 pb-3 pt-[calc(1.1rem+env(safe-area-inset-top))] backdrop-blur-2xl dark:bg-slate-950/70">
           <div className="flex items-center justify-between">
             <div>
@@ -416,7 +416,7 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="grid min-w-0 gap-4 overflow-x-hidden px-5 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-4">
+        <div className="grid min-w-0 gap-4 overflow-x-hidden px-5 pb-[calc(11rem+env(safe-area-inset-bottom))] pt-4">
           {tab === "Home" && (
             <>
               <Card className="overflow-hidden !bg-[linear-gradient(145deg,#111827_0%,#020617_100%)] p-5 !text-white ring-1 ring-white/40 dark:!bg-slate-900">
@@ -619,8 +619,9 @@ export default function Home() {
           )}
         </div>
 
-        <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md min-w-0 overflow-hidden px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:bottom-6">
-          <div className="grid grid-cols-5 items-end gap-1 rounded-[30px] border border-white/70 bg-white/95 p-2 shadow-[0_20px_55px_rgba(15,23,42,0.20)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/[0.94] dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
+        <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md min-w-0 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-8 md:bottom-6">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-t from-[#EEF4F8] via-[#EEF4F8]/90 to-transparent dark:from-[#020617] dark:via-[#020617]/90" />
+          <div className="grid h-[76px] grid-cols-5 items-center gap-1 rounded-[30px] border border-white/70 bg-white/95 p-2 shadow-[0_20px_55px_rgba(15,23,42,0.20)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/[0.94] dark:shadow-[0_22px_70px_rgba(0,0,0,0.45)]">
             {navItems.map((item) => {
               const active = tab === item.tab;
               const isAdd = item.tab === "Add";
@@ -628,9 +629,9 @@ export default function Home() {
                 <button
                   key={item.tab}
                   onClick={() => setTab(item.tab)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-black transition active:scale-95 ${isAdd ? "-mt-8" : "h-14"} ${active ? "text-slate-950 dark:text-white" : "text-slate-400 dark:text-slate-500"}`}
+                  className={`relative flex h-full min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-black transition active:scale-95 ${isAdd ? "pb-0" : ""} ${active ? "text-slate-950 dark:text-white" : "text-slate-400 dark:text-slate-500"}`}
                 >
-                  <span className={`grid place-items-center ${isAdd ? "h-16 w-16 rounded-full bg-emerald-500 text-white shadow-[0_14px_32px_rgba(16,185,129,0.45)] ring-4 ring-[#F3F6FA] dark:ring-slate-950" : `h-8 w-8 rounded-2xl ${active ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400"}`}`}>
+                  <span className={`grid place-items-center ${isAdd ? "h-12 w-12 rounded-full bg-emerald-500 text-white shadow-[0_12px_26px_rgba(16,185,129,0.38)] ring-4 ring-white dark:ring-slate-950" : `h-8 w-8 rounded-2xl ${active ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400"}`}`}>
                     <Icon name={item.icon} />
                   </span>
                   <span>{item.tab}</span>

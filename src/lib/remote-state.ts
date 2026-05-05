@@ -101,7 +101,14 @@ export async function loadRemoteState() {
   if (error) return null;
   const fallback = (data?.state as FinanceState | undefined) || null;
   if (fallback) await saveStructuredState(supabase, fallback);
-  return fallback;
+  if (fallback) return fallback;
+  await saveStructuredState(supabase, seedState);
+  await supabase.from("app_state").upsert({
+    id: "default",
+    state: seedState,
+    updated_at: new Date().toISOString(),
+  });
+  return seedState;
 }
 
 export async function getRemoteStatus() {
